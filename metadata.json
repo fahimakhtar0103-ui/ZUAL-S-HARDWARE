@@ -1,0 +1,8 @@
+{
+  "name": "Pro-Ledger Enterprise",
+  "description": "Enterprise-grade hardware ERP for managing customer ledgers, credit accounts, and inventory with precision.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
