@@ -52,7 +52,8 @@ export default function App() {
     };
     checkHash();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('[App] Initial getSession:', session?.user?.id, error);
       setSession(session);
       setLoading(false);
     });
@@ -60,6 +61,7 @@ export default function App() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[App] Auth state changed:', event, session?.user?.id);
       setSession(session);
       if (event === 'PASSWORD_RECOVERY') {
          setRecoveryMode(true);
