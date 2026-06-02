@@ -11,12 +11,14 @@ export default function AuthView() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{ code?: string; status?: number; hint?: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setErrorDetails(null);
     setMessage(null);
 
     try {
@@ -76,6 +78,28 @@ export default function AuthView() {
       }
       
       setError(errorMsg || 'An error occurred during authentication.');
+
+      // Categorize and generate customized suggestions/tips automatically based on the audited checklist
+      let hint = '';
+      const msgLower = (errorMsg || '').toLowerCase();
+      
+      if (msgLower.includes('confirm') || msgLower.includes('verified') || msgLower.includes('verification')) {
+         hint = 'Email confirmation settings are enabled on Supabase. Check your email for the confirmation link or turn off "Confirm email" inside Authentication -> Providers -> Email setting in your Supabase Dashboard.';
+      } else if (msgLower.includes('invalid login credentials') || msgLower.includes('credentials')) {
+         hint = 'Double check the email and password parameters. If you just registered, make sure you confirmed your email if confirmation is enabled.';
+      } else if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+         hint = 'Missing or invalid VITE_SUPABASE_URL. If you are deploying via Vercel, ensure you declared client-accessible VITE_VARS (not raw backend variables) with "VITE_" prefix: VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY.';
+      } else if (msgLower.includes('fetch') || msgLower.includes('cors') || msgLower.includes('network')) {
+         hint = 'Network connection failed. Verify if your deployment domain is listed in Supabase CORS / redirect configuration, and that VITE_SUPABASE_URL is correct.';
+      } else {
+         hint = 'Please check Supabase Auth logs & redirects setting. Ensure database schema RLS allows authenticated session state persistence.';
+      }
+
+      setErrorDetails({
+        code: err?.code || err?.status_code || err?.name,
+        status: err?.status,
+        hint: hint
+      });
     } finally {
       setLoading(false);
     }
@@ -96,7 +120,25 @@ export default function AuthView() {
            {error && (
              <div className="bg-error/10 text-error p-4 rounded-lg flex items-start gap-3 mb-6 text-sm font-medium">
                 <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                <p>{error}</p>
+                <div>
+                   <p className="font-bold">Authentication Error</p>
+                   <p className="text-error/90 mt-0.5">{error}</p>
+                   {errorDetails && (
+                      <div className="mt-2 pt-2 border-t border-error/20 text-xs flex flex-col gap-1.5 text-on-error-container">
+                         {(errorDetails.code || errorDetails.status) && (
+                            <div className="font-mono text-[10px] bg-error/5 p-1 rounded">
+                               Raw info: {errorDetails.code ? `code: ${errorDetails.code}` : ''} {errorDetails.status ? `| status: ${errorDetails.status}` : ''}
+                            </div>
+                         )}
+                         {errorDetails.hint && (
+                            <div className="bg-error/10 text-error p-2.5 rounded mt-1 font-sans leading-relaxed text-xs">
+                               <strong className="font-bold uppercase tracking-wider text-[10px] text-error block mb-0.5">💡 Troubleshooting Check:</strong>
+                               {errorDetails.hint}
+                            </div>
+                         )}
+                      </div>
+                   )}
+                </div>
              </div>
            )}
 
@@ -173,7 +215,7 @@ export default function AuthView() {
                <div className="mt-4 text-center">
                  <button 
                    type="button" 
-                   onClick={() => { setIsResetting(true); setError(null); setMessage(null); }}
+                   onClick={() => { setIsResetting(true); setError(null); setErrorDetails(null); setMessage(null); }}
                    className="text-primary text-sm font-medium hover:underline"
                  >
                    Forgot Password?
@@ -185,7 +227,7 @@ export default function AuthView() {
              {!isResetting && (
                <button 
                  type="button" 
-                 onClick={() => { setIsLogin(!isLogin); setError(null); setMessage(null); setIsResetting(false); }}
+                 onClick={() => { setIsLogin(!isLogin); setError(null); setErrorDetails(null); setMessage(null); setIsResetting(false); }}
                  className="text-secondary text-sm font-bold tracking-wide hover:underline"
                >
                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
@@ -194,7 +236,7 @@ export default function AuthView() {
              {isResetting && (
                <button 
                  type="button" 
-                 onClick={() => { setIsLogin(true); setError(null); setMessage(null); setIsResetting(false); }}
+                 onClick={() => { setIsLogin(true); setError(null); setErrorDetails(null); setMessage(null); setIsResetting(false); }}
                  className="text-secondary text-sm font-bold tracking-wide hover:underline"
                >
                  Back to Sign in
