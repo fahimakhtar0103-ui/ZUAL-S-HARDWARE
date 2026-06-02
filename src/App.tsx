@@ -23,8 +23,35 @@ export default function App() {
   const [context, setContext] = useState<AppContext>({});
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdatingPassword(true);
+    setPasswordError(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      alert('Password updated successfully');
+      setRecoveryMode(false);
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to update password');
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
 
   useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash.includes('type=recovery')) {
+        setRecoveryMode(true);
+      }
+    };
+    checkHash();
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -32,8 +59,11 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+         setRecoveryMode(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -50,6 +80,38 @@ export default function App() {
 
   if (!session) {
      return <AuthView />;
+  }
+
+  if (recoveryMode) {
+     return (
+       <div className="min-h-screen bg-background flex items-center justify-center p-4">
+         <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container overflow-hidden p-8">
+            <h2 className="text-xl font-bold text-on-surface mb-6">Set New Password</h2>
+            {passwordError && (
+              <div className="bg-error/10 text-error p-4 rounded-lg mb-6 text-sm font-medium">
+                 {passwordError}
+              </div>
+            )}
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+               <input 
+                 type="password" 
+                 placeholder="New Password" 
+                 required
+                 value={newPassword}
+                 onChange={e => setNewPassword(e.target.value)}
+                 className="w-full px-4 h-12 bg-surface-container border border-outline-variant rounded-lg focus:border-primary transition-colors"
+               />
+               <button 
+                 type="submit" 
+                 disabled={updatingPassword}
+                 className="w-full bg-primary text-on-primary font-bold h-12 rounded-lg flex items-center justify-center disabled:opacity-70"
+               >
+                  {updatingPassword ? <Loader2 className="animate-spin" /> : 'Update Password'}
+               </button>
+            </form>
+         </div>
+       </div>
+     );
   }
 
   // Define which views should omit the generic TopBar (they have custom headers or it's built-in)

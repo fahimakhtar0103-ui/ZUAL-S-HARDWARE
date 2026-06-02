@@ -75,36 +75,23 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
     setIsSubmitting(true);
     setErrorMsg(null);
     try {
-       // Optional: pass user_id explicitly just in case RLS or triggers expect created_by/user_id
        const userRes = await supabase.auth.getUser();
        const userId = userRes.data.user?.id;
-
-       if (isEditing && editingDiary.id) {
-         const { error } = await supabase.from('diaries').update({
-             name: editingDiary.name,
-             description: editingDiary.description
-         }).eq('id', editingDiary.id);
-         
-         if (error) throw error;
-      } else {
-         const userRes = await supabase.auth.getUser();
-         const userId = userRes.data.user?.id;
-         if (!userId) throw new Error('User not authenticated');
-         const { error } = await supabase.from('diaries').insert([{
-             name: newDiaryName,
-             description: newDiaryDesc,
-             created_by: userId
-         }]);
-         if (error) throw error;
-      }
-      
-      setIsModalOpen(false);
-      setNewDiaryName('');
-      setNewDiaryDesc('');
-      await fetchDiaries();
+       if (!userId) throw new Error('User not authenticated');
+       const { error } = await supabase.from('diaries').insert([{
+           name: newDiaryName,
+           description: newDiaryDesc,
+           created_by: userId
+       }]);
+       if (error) throw error;
+       
+       setIsModalOpen(false);
+       setNewDiaryName('');
+       setNewDiaryDesc('');
+       await fetchDiaries();
     } catch (error: any) {
-       console.error('Error saving diary:', error);
-       setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save diary');
+       console.error('Error creating diary:', error);
+       setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to create diary');
     } finally {
        setIsSubmitting(false);
     }
