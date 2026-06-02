@@ -45,6 +45,7 @@ export default function AuthView() {
           email,
           password,
           options: {
+            emailRedirectTo: window.location.origin,
             data: {
               full_name: name,
               phone: phone
@@ -61,7 +62,20 @@ export default function AuthView() {
       }
     } catch (err: any) {
       console.error('[AuthView] Auth Error Exception:', err);
-      setError(err.message || JSON.stringify(err) || 'An error occurred during authentication.');
+      
+      let errorMsg = err?.message || err?.error_description || err?.msg || '';
+      
+      if (!errorMsg && typeof err === 'object') {
+         try {
+             errorMsg = JSON.stringify(err);
+         } catch(e) {}
+      }
+      
+      if (!import.meta.env.VITE_SUPABASE_URL) {
+          errorMsg = 'Missing VITE_SUPABASE_URL in environment configuration. ' + errorMsg;
+      }
+      
+      setError(errorMsg || 'An error occurred during authentication.');
     } finally {
       setLoading(false);
     }
