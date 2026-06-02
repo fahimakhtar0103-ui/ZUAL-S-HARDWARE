@@ -17,6 +17,7 @@ import SearchView from './views/SearchView';
 import PaymentHistoryView from './views/PaymentHistoryView';
 import AuthView from './views/AuthView';
 import { Plus, Loader2 } from 'lucide-react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -160,6 +161,7 @@ export default function App() {
            </button>
          )}
       </main>
+      <SpeedInsights />
     </div>
   );
 }
