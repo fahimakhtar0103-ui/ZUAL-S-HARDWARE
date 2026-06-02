@@ -21,19 +21,27 @@ export default function AuthView() {
 
     try {
       if (isResetting) {
+        console.log('[AuthView] Attempting password reset for:', email);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin,
         });
         if (error) throw error;
+        console.log('[AuthView] Password reset link sent successfully');
         setMessage('Password reset link sent! Check your email.');
       } else if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('[AuthView] Attempting login for:', email);
+        const { error, data } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+           console.error('[AuthView] Login Error:', error);
+           throw error;
+        }
+        console.log('[AuthView] Login successful:', data);
       } else {
-        const { error } = await supabase.auth.signUp({
+        console.log('[AuthView] Attempting signup for:', email);
+        const { error, data } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -43,12 +51,17 @@ export default function AuthView() {
             }
           }
         });
-        if (error) throw error;
-        setMessage('Registration successful! You can now log in.');
+        if (error) {
+           console.error('[AuthView] Signup Error:', error);
+           throw error;
+        }
+        console.log('[AuthView] Signup successful:', data);
+        setMessage('Registration successful! Please check your email to confirm your account.');
         setIsLogin(true);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+      console.error('[AuthView] Auth Error Exception:', err);
+      setError(err.message || JSON.stringify(err) || 'An error occurred during authentication.');
     } finally {
       setLoading(false);
     }

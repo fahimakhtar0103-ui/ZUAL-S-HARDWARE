@@ -61,7 +61,17 @@ export default function SettingsView() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      console.log('[SettingsView] Attempting logout...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+         console.error('[SettingsView] Logout error:', error);
+      } else {
+         console.log('[SettingsView] Logout successful.');
+      }
+    } catch (err) {
+      console.error('[SettingsView] Logout exception:', err);
+    }
   };
 
   const saveSettings = async () => {
