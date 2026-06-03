@@ -216,18 +216,21 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
 
            <div>
               <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Payment Mode</label>
-              <div className="relative">
-                 <select 
-                   value={paymentMode}
-                   onChange={e => setPaymentMode(e.target.value)}
-                   className="w-full h-14 pl-5 pr-10 bg-surface-container/50 border border-outline-variant/50 rounded-xl text-[15px] font-bold text-on-surface focus:outline-none focus:border-primary transition-colors appearance-none"
-                 >
-                    <option>Cash</option>
-                    <option>UPI / PhonePe</option>
-                    <option>Bank Transfer (NEFT/RTGS)</option>
-                    <option>Cheque</option>
-                 </select>
-                 <Smartphone className="absolute right-4 top-1/2 -translate-y-1/2 text-primary pointer-events-none" size={20} />
+              <div className="flex flex-wrap gap-2">
+                 {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                     <button
+                       key={mode}
+                       type="button"
+                       onClick={() => setPaymentMode(mode)}
+                       className={`px-4 h-12 rounded-xl text-[14px] font-bold transition-all border ${
+                         paymentMode === mode 
+                           ? 'bg-primary text-on-primary border-primary shadow-sm' 
+                           : 'bg-surface-container/50 border-outline-variant/50 text-on-surface hover:bg-surface-container-high'
+                       }`}
+                     >
+                       {mode}
+                     </button>
+                 ))}
               </div>
            </div>
 

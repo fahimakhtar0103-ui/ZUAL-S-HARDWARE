@@ -149,13 +149,13 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 -- Basic default policies (allow authenticated access).
 -- Further refinement required depending on the exact tenancy model (e.g. `using (created_by = auth.uid())`)
-CREATE POLICY "Allow authenticated full access users" ON users FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access app_settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access diaries" ON diaries FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access customers" ON customers FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access products" ON products FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access transactions" ON transactions FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authenticated full access payments" ON payments FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access users" ON users FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access app_settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access diaries" ON diaries FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access customers" ON customers FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access products" ON products FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access transactions" ON transactions FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access payments" ON payments FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- ==========================================
 -- 8. INDEXES

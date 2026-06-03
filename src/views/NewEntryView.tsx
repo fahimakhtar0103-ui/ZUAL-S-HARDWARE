@@ -36,6 +36,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
     { id: '1', material: '', qty: 1, unit: 'Trolley', rate: 0 }
   ]);
   const [cashPaid, setCashPaid] = useState<number | ''>('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
 
   const totalBill = items.reduce((acc, item) => acc + (item.qty * item.rate), 0);
   const finalDue = totalBill - (Number(cashPaid) || 0);
@@ -96,7 +97,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
                     customer_id: selectedCustomer.id,
                     recorded_by: userId,
                     amount: Number(cashPaid),
-                    payment_mode: 'Cash',
+                    payment_mode: paymentMode,
                     reference_notes: 'Initial Payment (Offline)',
                     date
                 }, selectedCustomer.name);
@@ -137,7 +138,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
                 customer_id: selectedCustomer.id,
                 recorded_by: userId,
                 amount: Number(cashPaid),
-                payment_mode: 'Cash',
+                payment_mode: paymentMode,
                 reference_notes: 'Initial Payment',
                 date
             }]);
@@ -310,10 +311,34 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
                <div className="font-label-numeric text-[26px] text-on-surface font-bold tracking-tight leading-none">₹ {totalBill.toLocaleString()}</div>
             </div>
             <div className="col-span-1">
-               <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Cash Paid (₹)</label>
+               <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Amount Paid (₹)</label>
                <input value={cashPaid} onChange={e => setCashPaid(e.target.value === '' ? '' : Number(e.target.value))} className="w-full h-11 px-3 bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-label-numeric font-bold text-lg text-right" type="number" placeholder="0" />
             </div>
          </div>
+         
+         {Number(cashPaid) > 0 && (
+            <div className="flex justify-end mt-4">
+              <div className="w-full md:w-2/4">
+                <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest text-right">Payment Mode</label>
+                <div className="flex flex-wrap gap-2 justify-end">
+                   {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                       <button
+                         key={mode}
+                         type="button"
+                         onClick={() => setPaymentMode(mode)}
+                         className={`px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all border ${
+                           paymentMode === mode 
+                             ? 'bg-primary text-on-primary border-primary shadow-sm' 
+                             : 'bg-surface-container/50 border-outline-variant/30 text-on-surface hover:bg-surface-container-high'
+                         }`}
+                       >
+                         {mode}
+                       </button>
+                   ))}
+                </div>
+              </div>
+            </div>
+         )}
          
          <div className={`flex flex-col md:flex-row md:items-center justify-between rounded-xl p-5 shadow-sm gap-4 md:gap-0 ${finalDue > 0 ? 'bg-error-container text-on-error-container' : 'bg-secondary-container text-on-secondary-container'}`}>
             <div>
