@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2, WifiOff } from 'lucide-react';
+import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2, WifiOff, Edit, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppContext } from '../types';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
 export default function CustomerLedgerView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
   const { isOnline, pendingCount } = useOnlineStatus();
-  const [activeTab, setActiveTab] = useState('Ledger');
   const [customer, setCustomer] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  // Edit & Delete state
+  const [entryToDelete, setEntryToDelete] = useState<any>(null);
+  const [entryToEdit, setEntryToEdit] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   
   const customerId = context?.customerId;
 
@@ -51,7 +56,6 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
          if (txResult.data) setTransactions(txResult.data);
          if (payResult.data) setPayments(payResult.data);
          
-         // Outstanding balance comes from the view (balResult), but we can also just compute it from txResult and payResult
          if (custResult.data && balResult.data) {
              setCustomer((prev: any) => ({...prev, outstandingBalance: Number(balResult.data.outstanding_balance) || 0}));
          }
@@ -61,6 +65,68 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
      } finally {
          setLoading(false);
      }
+  };
+
+  const confirmDelete = async () => {
+     if (!entryToDelete) return;
+     setIsSubmitting(true);
+     setErrorMsg(null);
+     
+     try {
+         let error;
+         if (entryToDelete.type === 'debit') {
+             const res = await supabase.from('transactions').delete().eq('id', entryToDelete.id);
+             error = res.error;
+         } else {
+             const res = await supabase.from('payments').delete().eq('id', entryToDelete.id);
+             error = res.error;
+         }
+         
+         if (error) throw error;
+         
+         await fetchData();
+         setEntryToDelete(null);
+     } catch (e: any) {
+         console.error("Error deleting entry:", e);
+         setErrorMsg(e.message || e.details || 'Failed to delete entry');
+     } finally {
+         setIsSubmitting(false);
+     }
+  };
+
+  const saveEdit = async () => {
+    if (!entryToEdit) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+    try {
+        let error;
+        if (entryToEdit.type === 'debit') {
+            const res = await supabase.from('transactions').update({
+                date: entryToEdit.date,
+                total_amount: Number(entryToEdit.total || 0),
+                items: entryToEdit.items || []
+            }).eq('id', entryToEdit.id);
+            error = res.error;
+        } else {
+            const res = await supabase.from('payments').update({
+                date: entryToEdit.date,
+                amount: Number(entryToEdit.amount || 0),
+                payment_mode: entryToEdit.mode || 'Cash',
+                reference_notes: entryToEdit.notes || ''
+            }).eq('id', entryToEdit.id);
+            error = res.error;
+        }
+
+        if (error) throw error;
+        
+        await fetchData();
+        setEntryToEdit(null);
+    } catch(e: any) {
+        console.error("Error updating entry:", e);
+        setErrorMsg(e.message || e.details || 'Failed to update entry');
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -198,18 +264,6 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
         </div>
         )}
 
-        <div className="border-b border-outline-variant flex gap-8 px-2 mt-4">
-           {['Ledger', 'History'].map(tab => (
-             <button 
-               key={tab} 
-               onClick={() => setActiveTab(tab)}
-               className={`pb-3 border-b-2 text-[15px] px-2 transition-colors ${activeTab === tab ? 'border-primary text-primary font-bold' : 'border-transparent text-on-surface-variant font-medium hover:text-on-surface'}`}
-             >
-               {tab}
-             </button>
-           ))}
-        </div>
-
         <div className="bg-surface rounded-xl shadow-sm border border-surface-variant/70 overflow-hidden mb-12">
            <div className="grid grid-cols-12 gap-4 p-4 border-b border-surface-variant/70 bg-surface-container-low text-[10px] text-on-surface-variant uppercase tracking-wider font-bold hidden md:grid">
               <div className="col-span-2">Date</div>
@@ -226,7 +280,27 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                  <div key={row.id} className={`group hover:bg-surface-container-lowest transition-colors relative cursor-pointer ${row.isPending ? 'bg-amber-500/5' : ''}`}>
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 items-start">
-                       <div className="md:col-span-2 text-sm text-on-surface-variant pt-1 font-bold">{new Date(row.date).toLocaleDateString()}</div>
+                       <div className="md:col-span-2 text-sm text-on-surface-variant pt-1 font-bold flex justify-between items-center">
+                          <span>{new Date(row.date).toLocaleDateString()}</span>
+                          {!row.isPending && (
+                            <div className="flex md:hidden items-center gap-1">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setEntryToEdit({...row}); }}
+                                    className="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary-container transition-colors rounded-full bg-surface-variant/20"
+                                    title="Edit Entry"
+                                >
+                                    <Edit size={14} />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setEntryToDelete(row); }}
+                                    className="p-1.5 text-on-surface-variant hover:text-error hover:bg-error-container transition-colors rounded-full bg-surface-variant/20"
+                                    title="Delete Entry"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                          )}
+                       </div>
                        <div className="md:col-span-5">
                           {row.type === 'debit' ? (
                               <div>
@@ -278,8 +352,28 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                                <span className="text-green-600">- {row.amount.toLocaleString()} <span className="text-green-600 text-[10px] ml-1">CR</span></span>
                            )}
                        </div>
-                       <div className="hidden md:block md:col-span-2 text-right font-label-numeric font-bold text-[16px] text-on-surface pt-1 px-4 border-l border-outline-variant/30">
-                           {row.runningBalance.toLocaleString()} {row.runningBalance < 0 ? 'CR' : 'DR'}
+                       <div className="hidden md:flex flex-col md:col-span-2 text-right items-end pt-1 px-4 border-l border-outline-variant/30 relative">
+                           <span className="font-label-numeric font-bold text-[16px] text-on-surface">
+                                {row.runningBalance.toLocaleString()} {row.runningBalance < 0 ? 'CR' : 'DR'}
+                           </span>
+                           {!row.isPending && (
+                            <div className="absolute top-1/2 -translate-y-1/2 right-1 flex items-center md:opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-lowest/80 backdrop-blur pl-2 rounded-l-xl">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setEntryToEdit({...row}); }}
+                                    className="p-1.5 text-on-surface-variant hover:text-secondary hover:bg-secondary-container transition-colors rounded-full"
+                                    title="Edit Entry"
+                                >
+                                    <Edit size={16} />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setEntryToDelete(row); }}
+                                    className="p-1.5 text-on-surface-variant hover:text-error hover:bg-error-container transition-colors rounded-full ml-1"
+                                    title="Delete Entry"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                           )}
                        </div>
                     </div>
                  </div>
@@ -297,6 +391,89 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
            </div>
         </div>
       </div>
+      
+      {/* Delete Entry Modal */}
+      {entryToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Entry</h3>
+                <p className="text-sm text-on-surface-variant mb-6 text-balance">
+                    Are you sure you want to delete this {entryToDelete.type === 'debit' ? 'purchase' : 'payment'} entry from {new Date(entryToDelete.date).toLocaleDateString()}? 
+                    This action cannot be undone.
+                </p>
+                <div className="flex gap-3 justify-end mt-2">
+                    <button onClick={() => setEntryToDelete(null)} className="px-5 py-2.5 rounded-xl font-bold text-on-surface bg-surface-container hover:bg-surface-variant transition-colors" disabled={isSubmitting}>
+                        Cancel
+                    </button>
+                    <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl font-bold text-on-error bg-error hover:bg-error/90 transition-colors shadow-sm flex items-center gap-2" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {entryToEdit && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
+            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30" onClick={e => e.stopPropagation()}>
+                <div className="px-6 py-5 border-b border-outline-variant/30 flex justify-between items-center">
+                    <h3 className="text-xl font-bold text-on-surface tracking-tight">Edit {entryToEdit.type === 'debit' ? 'Purchase' : 'Payment'}</h3>
+                    <button onClick={() => setEntryToEdit(null)} className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors"><X size={20}/></button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Date</label>
+                        <input type="date" value={entryToEdit.date} onChange={e => setEntryToEdit({...entryToEdit, date: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium flex-1 text-on-surface" />
+                    </div>
+
+                    {entryToEdit.type === 'debit' ? (
+                        <>
+                            <div>
+                                <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Total Amount (₹)</label>
+                                <input type="number" value={entryToEdit.total || ''} onChange={e => setEntryToEdit({...entryToEdit, total: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-label-numeric font-semibold text-lg text-primary" placeholder="0" />
+                                {entryToEdit.items && entryToEdit.items.length > 0 && (
+                                    <p className="text-xs text-on-surface-variant mt-2 font-medium">Note: Editing total amount here does not edit individual items. Consider deleting and recreating the entry if items changed.</p>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Amount (₹)</label>
+                                <input type="number" value={entryToEdit.amount || ''} onChange={e => setEntryToEdit({...entryToEdit, amount: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-label-numeric font-semibold text-lg text-green-600" placeholder="0" />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Payment Mode</label>
+                                <select value={entryToEdit.mode || 'Cash'} onChange={e => setEntryToEdit({...entryToEdit, mode: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary outline-none transition-all font-medium appearance-none text-on-surface">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Cheque">Cheque</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Notes / Reference (Optional)</label>
+                                <input type="text" value={entryToEdit.notes || ''} onChange={e => setEntryToEdit({...entryToEdit, notes: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary outline-none transition-all font-medium placeholder:text-on-surface-variant/50 text-on-surface" placeholder="Cheque No, UPI Ref..." />
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="p-6 border-t border-outline-variant/30 flex justify-end gap-3 bg-surface">
+                    <button onClick={() => setEntryToEdit(null)} className="px-5 py-2.5 rounded-xl font-bold text-on-surface-variant hover:bg-surface-container transition-colors" disabled={isSubmitting}>Cancel</button>
+                    <button onClick={saveEdit} className="px-6 py-2.5 rounded-xl font-bold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   )
 }

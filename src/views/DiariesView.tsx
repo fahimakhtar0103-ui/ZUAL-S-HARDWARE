@@ -203,7 +203,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
                        <MoreVertical size={18} />
                      </button>
                      <button 
-                         onClick={(e) => handleDeleteDiaryClick(diary.id, e)}
+                         onClick={(e) => { e.stopPropagation(); handleDeleteDiaryClick(diary.id); }}
                          className="text-error md:opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-error-container/30 rounded-full ml-1"
                          title="Delete diary"
                      >
