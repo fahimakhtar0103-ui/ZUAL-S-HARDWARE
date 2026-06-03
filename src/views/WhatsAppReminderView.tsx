@@ -5,7 +5,6 @@ import { AppContext } from '../types';
 import { supabase } from '../lib/supabase';
 
 export default function WhatsAppReminderView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
-  const [includePdf, setIncludePdf] = useState(true);
   const [customer, setCustomer] = useState<any>(null);
   const [outstandingBalance, setOutstandingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -91,21 +90,6 @@ Thank you.</p>
                       <button className="absolute top-4 right-4 h-8 px-4 rounded bg-surface-container text-on-surface hover:bg-surface-variant opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-bold border border-outline-variant/30 shadow-sm uppercase tracking-wider">
                          Edit Text
                       </button>
-                   </div>
-                </div>
-
-                <div className="bg-surface-container rounded-xl p-5 flex items-center justify-between border border-transparent hover:border-outline-variant/50 transition-colors cursor-pointer" onClick={() => setIncludePdf(!includePdf)}>
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0 shadow-sm">
-                         <FileText size={20} fill="currentColor" />
-                      </div>
-                      <div className="flex flex-col">
-                         <span className="text-[15px] font-bold text-on-surface">Include Ledger PDF</span>
-                         <span className="text-[12px] font-medium text-on-surface-variant mt-0.5">Attaches statement from previous to current</span>
-                      </div>
-                   </div>
-                   <div className={`w-12 h-6 rounded-full relative transition-colors ${includePdf ? 'bg-secondary' : 'bg-surface-variant'}`}>
-                      <div className={`absolute top-[2px] w-5 h-5 rounded-full bg-white transition-transform shadow-sm ${includePdf ? 'left-[22px]' : 'left-[2px]'}`} />
                    </div>
                 </div>
 

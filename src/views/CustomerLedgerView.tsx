@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2 } from 'lucide-react';
+import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppContext } from '../types';
+import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
 export default function CustomerLedgerView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
+  const { isOnline, pendingCount } = useOnlineStatus();
   const [activeTab, setActiveTab] = useState('Ledger');
   const [customer, setCustomer] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -17,12 +19,33 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
      if (!customerId) return;
      setLoading(true);
      try {
-         const [custResult, txResult, payResult, balResult] = await Promise.all([
-             supabase.from('customers').select('*').eq('id', customerId).single(),
-             supabase.from('transactions').select('*').eq('customer_id', customerId).order('date', { ascending: false }),
-             supabase.from('payments').select('*').eq('customer_id', customerId).order('date', { ascending: false }),
-             supabase.from('view_customer_balances').select('outstanding_balance').eq('customer_id', customerId).single()
-         ]);
+         const isNetworkError = (error: any) => {
+             if (!navigator.onLine) return true;
+             const msg = (error?.message || '').toLowerCase();
+             return msg.includes('fetch') || msg.includes('network') || msg.includes('cors') || error?.status === 0;
+         };
+
+         let custResult: any = {}, txResult: any = {}, payResult: any = {}, balResult: any = {};
+         try {
+             const [cust, tx, pay, bal] = await Promise.all([
+                 supabase.from('customers').select('*').eq('id', customerId).single(),
+                 supabase.from('transactions').select('*').eq('customer_id', customerId).order('date', { ascending: false }),
+                 supabase.from('payments').select('*').eq('customer_id', customerId).order('date', { ascending: false }),
+                 supabase.from('view_customer_balances').select('outstanding_balance').eq('customer_id', customerId).single()
+             ]);
+             custResult = cust;
+             txResult = tx;
+             payResult = pay;
+             balResult = bal;
+         } catch (netErr) {
+             console.warn("Using offline fallback in ledger view:", netErr);
+             const pendingCust = offlineSync.getPendingOps().find(op => op.type === 'customer' && (op.payload.id === customerId || op.id === customerId));
+             if (pendingCust) {
+                 custResult.data = { id: customerId, name: pendingCust.customerName || pendingCust.payload.name, address: pendingCust.payload.address, phone: pendingCust.payload.phone, isPending: true };
+             } else {
+                 custResult.data = { id: customerId, name: 'Offline Profile' };
+             }
+         }
 
          if (custResult.data) setCustomer(custResult.data);
          if (txResult.data) setTransactions(txResult.data);
@@ -30,7 +53,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
          
          // Outstanding balance comes from the view (balResult), but we can also just compute it from txResult and payResult
          if (custResult.data && balResult.data) {
-             setCustomer(prev => ({...prev, outstandingBalance: Number(balResult.data.outstanding_balance) || 0}));
+             setCustomer((prev: any) => ({...prev, outstandingBalance: Number(balResult.data.outstanding_balance) || 0}));
          }
      } catch (error: any) {
          console.error("Error fetching ledger data:", error);
@@ -42,7 +65,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
 
   useEffect(() => {
      fetchData();
-  }, [customerId]);
+  }, [customerId, pendingCount]);
 
   if (!customerId) {
       return <div className="flex-1 flex items-center justify-center pt-20 text-on-surface-variant font-medium">Customer not selected.</div>;
@@ -63,11 +86,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       );
   }
 
-  const totalPurchases = transactions.reduce((acc, t) => acc + Number(t.total_amount), 0);
-  const totalCollections = payments.reduce((acc, p) => acc + Number(p.amount), 0);
-  const outstandingBalance = totalPurchases - totalCollections;
-
-  // Combine tx and py into timeline
+  // Combine tx, py and pending operations into timeline
   const timeline: any[] = [];
   transactions.forEach(t => {
       timeline.push({ type: 'debit', date: t.date, total: Number(t.total_amount), items: t.items, id: t.id, created_at: t.created_at || t.updated_at });
@@ -76,10 +95,47 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       timeline.push({ type: 'credit', date: p.date, amount: Number(p.amount), mode: p.payment_mode, notes: p.reference_notes, id: p.id, created_at: p.created_at || p.updated_at });
   });
 
+  // Pull pending operations for this specific customer
+  const pendingOps = offlineSync.getPendingOps().filter(op => op.payload?.customer_id === customerId);
+  pendingOps.forEach(op => {
+      if (op.type === 'transaction') {
+          timeline.push({
+              type: 'debit',
+              date: op.payload.date || new Date().toISOString().split('T')[0],
+              total: Number(op.payload.total_amount),
+              items: op.payload.items,
+              id: op.id,
+              created_at: new Date(op.timestamp).toISOString(),
+              isPending: true
+          });
+      } else if (op.type === 'payment') {
+          timeline.push({
+              type: 'credit',
+              date: op.payload.date || new Date().toISOString().split('T')[0],
+              amount: Number(op.payload.amount),
+              mode: op.payload.payment_mode || 'Cash',
+              notes: op.payload.reference_notes,
+              id: op.id,
+              created_at: new Date(op.timestamp).toISOString(),
+              isPending: true
+          });
+      }
+  });
+
   timeline.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
   });
+
+  const totalPurchases = timeline
+      .filter(item => item.type === 'debit')
+      .reduce((acc, t) => acc + Number(t.total), 0);
+
+  const totalCollections = timeline
+      .filter(item => item.type === 'credit')
+      .reduce((acc, p) => acc + Number(p.amount), 0);
+
+  const outstandingBalance = totalPurchases - totalCollections;
 
   let runningBalance = 0;
   const ledgerRows = timeline.map(entry => {
@@ -167,7 +223,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                  <div className="p-8 text-center text-on-surface-variant font-medium">No ledger entries found.</div>
              ) : (
                 ledgerRows.map(row => (
-                 <div key={row.id} className="group hover:bg-surface-container-lowest transition-colors relative cursor-pointer">
+                 <div key={row.id} className={`group hover:bg-surface-container-lowest transition-colors relative cursor-pointer ${row.isPending ? 'bg-amber-500/5' : ''}`}>
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 items-start">
                        <div className="md:col-span-2 text-sm text-on-surface-variant pt-1 font-bold">{new Date(row.date).toLocaleDateString()}</div>
@@ -176,6 +232,11 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                               <div>
                                  <div className="flex items-center gap-2 text-[14px] font-bold text-on-surface mb-3 border-b border-outline-variant/20 pb-2">
                                      <FileText size={16} className="text-secondary" /> Purchase Invoice
+                                     {row.isPending && (
+                                       <span className="inline-flex items-center gap-1 text-[9px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">
+                                          <WifiOff size={10} /> Sync Pending
+                                       </span>
+                                     )}
                                  </div>
                                  <div className="space-y-3">
                                      {(row.items || []).map((item: any, idx: number) => (
@@ -195,6 +256,11 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                               <div>
                                  <div className="flex items-center gap-2 text-[14px] font-bold text-green-700">
                                      <CreditCard size={16} /> Payment Received ({row.mode})
+                                     {row.isPending && (
+                                       <span className="inline-flex items-center gap-1 text-[9px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">
+                                          <WifiOff size={10} /> Sync Pending
+                                       </span>
+                                     )}
                                  </div>
                                  {row.notes && <p className="text-xs text-on-surface-variant mt-1">{row.notes}</p>}
                                  <div className="flex justify-between md:hidden pt-3 border-t border-outline-variant/20 mt-3">

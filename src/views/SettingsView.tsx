@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Store, UploadCloud, ShieldCheck, Plus, SlidersHorizontal, Database, Download, LogOut, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Store, UploadCloud, ShieldCheck, Plus, SlidersHorizontal, Database, Download, LogOut, Loader2, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function SettingsView() {
   const [dark, setDark] = useState(false);
@@ -14,6 +15,7 @@ export default function SettingsView() {
   const [isSaving, setIsSaving] = useState(false);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -233,6 +235,7 @@ export default function SettingsView() {
       setExportError(null);
       try {
           const data = await fetchAllData();
+          const XLSX = await import('xlsx');
           
           const wb = XLSX.utils.book_new();
           
@@ -257,6 +260,59 @@ export default function SettingsView() {
           alert(`Excel Export failed: ${error.message || error.details || 'Unknown error'}`);
       } finally {
           setIsExportingExcel(false);
+      }
+  };
+
+  const handleExportPDF = async () => {
+      setIsExportingPDF(true);
+      setExportError(null);
+      try {
+          const data = await fetchAllData();
+          const doc = new jsPDF();
+          
+          doc.setFontSize(20);
+          doc.setTextColor(26, 54, 93);
+          doc.text("Database Backup Summary", 14, 20);
+          
+          doc.setFontSize(10);
+          doc.setTextColor(115, 115, 115);
+          doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+          doc.text(`Owner: ${ownerName}`, 14, 34);
+          doc.text(`Shop: ${shopName}`, 14, 40);
+          
+          doc.setDrawColor(226, 232, 240);
+          doc.line(14, 44, 196, 44);
+
+          // Add simple stats table
+          doc.setFontSize(14);
+          doc.setTextColor(26, 54, 93);
+          doc.text("Entity Record Summary", 14, 52);
+
+          const summaryColumns = ["Entity Name", "Record Count", "Status"];
+          const summaryRows = [
+              ["Customers", String(data.customers.length), data.customers.length > 0 ? "OK" : "Empty"],
+              ["Diaries/Logs", String(data.diaries.length), data.diaries.length > 0 ? "OK" : "Empty"],
+              ["Transactions", String(data.transactions.length), data.transactions.length > 0 ? "OK" : "Empty"],
+              ["Payments", String(data.payments.length), data.payments.length > 0 ? "OK" : "Empty"],
+          ];
+
+          autoTable(doc, {
+              startY: 56,
+              head: [summaryColumns],
+              body: summaryRows,
+              theme: 'striped',
+              headStyles: { fillColor: [26, 54, 93] },
+              styles: { font: 'helvetica', fontSize: 10 }
+          });
+
+          doc.save(`hardware_hub_pdf_backup_${Date.now()}.pdf`);
+          alert('PDF Summary Export completed successfully!');
+      } catch (error: any) {
+          console.error("PDF Export failed:", error);
+          setExportError(`PDF Export failed: ${error.message || error.details || 'Unknown error'}`);
+          alert(`PDF Export failed: ${error.message || error.details || 'Unknown error'}`);
+      } finally {
+          setIsExportingPDF(false);
       }
   };
 
@@ -397,20 +453,29 @@ export default function SettingsView() {
                  </div>
               )}
 
+
+              <button 
+                  onClick={handleExportPDF}
+                  disabled={isExportingPDF || isExportingCSV || isExportingExcel}
+                  className="h-12 w-full bg-transparent border border-outline-variant/30 text-white rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors shadow-sm disabled:opacity-50 cursor-pointer">
+                 {isExportingPDF ? <Loader2 size={20} className="animate-spin" /> : <FileText size={20} />} 
+                 {isExportingPDF ? 'Exporting PDF...' : 'Export Summary (PDF)'}
+              </button>
+
               <button 
                   onClick={handleExportExcel}
-                  disabled={isExportingExcel || isExportingCSV}
-                  className="h-12 w-full bg-secondary-fixed text-on-secondary-fixed rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-primary-fixed transition-colors shadow-md disabled:opacity-50">
-                 {isExportingExcel ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} />} 
-                 {isExportingExcel ? 'Exporting...' : 'Export Database (Excel)'}
+                  disabled={isExportingPDF || isExportingCSV || isExportingExcel}
+                  className="h-12 w-full bg-transparent border border-outline-variant/30 text-white rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors shadow-sm disabled:opacity-50 cursor-pointer">
+                 {isExportingExcel ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />} 
+                 {isExportingExcel ? 'Exporting Excel...' : 'Export Database (Excel)'}
               </button>
-              
+
               <button 
                   onClick={handleExportCSV}
-                  disabled={isExportingExcel || isExportingCSV}
-                  className="h-12 w-full bg-transparent border border-outline-variant/30 text-white rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors shadow-sm disabled:opacity-50">
+                  disabled={isExportingPDF || isExportingCSV || isExportingExcel}
+                  className="h-12 w-full bg-transparent border border-outline-variant/30 text-white rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-colors shadow-sm disabled:opacity-50 cursor-pointer">
                  {isExportingCSV ? <Loader2 size={20} className="animate-spin" /> : <Download size={20} />} 
-                 {isExportingCSV ? 'Exporting...' : 'Export Database (CSV)'}
+                 {isExportingCSV ? 'Exporting CSV...' : 'Export Database (CSV)'}
               </button>
            </div>
         </section>

@@ -8,6 +8,37 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'THIS_MONTH'>('ALL');
+
+  const convertToCSV = (arr: any[]) => {
+      if (arr.length === 0) return '';
+      const csv = [
+          ['Receipt ID', 'Date', 'Customer', 'Mode', 'Amount (₹)', 'Notes'].join(','),
+          ...arr.map(row => [
+              row.id || '',
+              row.date || '',
+              row.customerName || 'Unknown',
+              row.payment_mode || 'Cash',
+              row.amount || 0,
+              row.reference_notes || ''
+          ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+      return csv;
+  };
+
+  const handleExportPayments = () => {
+      if (filteredPayments.length === 0) {
+          alert('No payments to export');
+          return;
+      }
+      const csvContent = convertToCSV(filteredPayments);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `payment_details_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+  };
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -44,10 +75,20 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
     fetchPayments();
   }, []);
 
-  const filteredPayments = payments.filter(p => 
-      p.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      p.reference_notes?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPayments = payments.filter(p => {
+      const matchesSearch = p.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            p.reference_notes?.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+      if (dateFilter === 'ALL') return true;
+      const paymentDate = new Date(p.date).toISOString().split('T')[0];
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dateFilter === 'TODAY') return paymentDate === todayStr;
+      if (dateFilter === 'THIS_MONTH') {
+          const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+          return paymentDate.startsWith(currentMonth);
+      }
+      return true;
+  });
 
   return (
     <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 md:p-12 space-y-6 flex flex-col h-full">
@@ -66,7 +107,7 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
         </div>
         
         <div className="flex items-center gap-3">
-           <button className="h-12 px-6 rounded-xl bg-surface border border-outline-variant/40 text-[14px] font-bold text-on-surface flex items-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm">
+           <button onClick={handleExportPayments} className="h-12 px-6 rounded-xl bg-surface border border-outline-variant/40 text-[14px] font-bold text-on-surface flex items-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm">
               <Download size={18} /> Export List
            </button>
         </div>
@@ -84,8 +125,17 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
             />
          </div>
          <div className="w-px bg-outline-variant/30 hidden md:block my-2"></div>
-         <button className="md:flex hidden items-center gap-2 px-6 h-12 text-[14px] font-bold text-on-surface hover:bg-surface-container rounded-lg transition-colors">
-            <Filter size={18} className="text-secondary" /> Date Range: <span className="font-medium">All Time</span>
+         <button 
+           onClick={() => setDateFilter(prev => {
+               if (prev === 'ALL') return 'TODAY';
+               if (prev === 'TODAY') return 'THIS_MONTH';
+               return 'ALL';
+           })}
+           className="md:flex hidden items-center gap-2 px-6 h-12 text-[14px] font-bold text-on-surface hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
+         >
+            <Filter size={18} className="text-secondary" /> Date Range: <span className="font-semibold text-primary">
+               {dateFilter === 'ALL' ? 'All Time' : dateFilter === 'TODAY' ? 'Today' : 'This Month'}
+            </span>
          </button>
       </div>
 
@@ -134,7 +184,7 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
                               </div>
                            </td>
                            <td className="p-5">
-                              <span onClick={() => navigateTo('customer-ledger')} className="text-[15px] font-bold text-on-surface hover:text-primary cursor-pointer line-clamp-1">{p.customerName}</span>
+                              <span onClick={() => navigateTo('customer-ledger', { customerId: p.customer_id })} className="text-[15px] font-bold text-on-surface hover:text-primary cursor-pointer line-clamp-1">{p.customerName}</span>
                            </td>
                            <td className="p-5">
                               <div className="flex justify-center">

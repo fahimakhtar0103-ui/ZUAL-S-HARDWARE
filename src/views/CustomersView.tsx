@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, MapPin, Edit, Trash2, Plus, X, Phone, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, MapPin, Edit, Trash2, Plus, X, Phone, Loader2, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppContext } from '../types';
+import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
 export default function CustomersView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
+  const { isOnline, pendingCount } = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState('');
   
   const diaryId = context?.diaryId;
@@ -11,6 +13,8 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   // Data state
   const [customers, setCustomers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [diaries, setDiaries] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<'ALL' | 'OUTSTANDING' | 'OVER_LIMIT'>('ALL');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,11 +46,36 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
               status: bal?.status || 'CLEARED'
           };
       });
-      setCustomers(mapped);
+
+      // Optimistically append pending offline customers
+      const pendingCustomerOps = offlineSync.getPendingOps().filter(op => op.type === 'customer' && op.action === 'insert');
+      const pendingCustomers = pendingCustomerOps.map(op => ({
+          ...op.payload,
+          id: op.payload.id || op.id, // Ensure stable client key
+          balance: 0,
+          status: 'CLEARED',
+          isPending: true
+      }));
+
+      setCustomers([...pendingCustomers, ...mapped]);
 
     } catch (error: any) {
       console.error('Error fetching customers:', error);
-      setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to fetch customers');
+      
+      // Fallback: If completely offline / query fails, we can still load from the queue
+      const pendingCustomerOps = offlineSync.getPendingOps().filter(op => op.type === 'customer' && op.action === 'insert');
+      const pendingCustomers = pendingCustomerOps.map(op => ({
+          ...op.payload,
+          id: op.payload.id || op.id,
+          balance: 0,
+          status: 'CLEARED',
+          isPending: true
+      }));
+      if (pendingCustomers.length > 0) {
+        setCustomers(pendingCustomers);
+      } else {
+        setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to fetch customers');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -54,19 +83,46 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
 
   useEffect(() => {
     fetchCustomers();
-  }, [diaryId]);
+  }, [diaryId, pendingCount]);
+
+  useEffect(() => {
+    const fetchDiariesList = async () => {
+      try {
+        const { data, error } = await supabase.from('diaries').select('id, name').order('name');
+        if (!error && data) {
+          setDiaries(data);
+        }
+      } catch (err) {
+        console.error('Error fetching diaries:', err);
+      }
+    };
+    fetchDiariesList();
+  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.phone && c.phone.includes(searchQuery))
-  );
+  const filteredCustomers = customers.filter(c => {
+    const matchesQuery = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (c.phone && c.phone.includes(searchQuery));
+    if (!matchesQuery) return false;
+    
+    if (filterType === 'OUTSTANDING') {
+      return (c.balance || 0) > 0;
+    }
+    if (filterType === 'OVER_LIMIT') {
+      return c.status === 'OVER_LIMIT';
+    }
+    return true;
+  });
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (id.toString().startsWith('cust-') || id.toString().startsWith('customer-')) {
+      alert('This customer is still pending offline synchronization. Please delete it when online, or refresh to discard offline cache.');
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this customer? This will delete all their transactions and payments.')) return;
     
     setErrorMsg(null);
@@ -82,7 +138,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   };
 
   const openAddModal = () => {
-    setEditingCustomer({ name: '', phone: '', address: '', credit_limit: 0 });
+    setEditingCustomer({ name: '', phone: '', address: '', credit_limit: 0, diary_id: diaryId || '' });
     setIsModalOpen(true);
   };
 
@@ -94,25 +150,58 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
 
   const handleSaveCustomer = async () => {
     if (!editingCustomer?.name) return;
+    if (!editingCustomer?.diary_id) {
+        setErrorMsg('Please select a diary for this customer');
+        return;
+    }
     setIsSubmitting(true);
     setErrorMsg(null);
+
+    const isNetworkError = (error: any) => {
+        if (!navigator.onLine) return true;
+        const msg = (error?.message || '').toLowerCase();
+        return msg.includes('fetch') || msg.includes('network') || msg.includes('cors') || error?.status === 0;
+    };
+
+    const isEditing = !!editingCustomer.id;
+    const tempId = editingCustomer.id || `customer-temp-${Date.now()}`;
+    const payload = {
+       id: tempId,
+       name: editingCustomer.name,
+       phone: editingCustomer.phone,
+       address: editingCustomer.address,
+       credit_limit: editingCustomer.credit_limit || editingCustomer.creditLimit || 0,
+       diary_id: editingCustomer.diary_id,
+    };
+
+    const saveOffline = () => {
+        if (isEditing) {
+            alert('Editing offline profiles is not supported yet. Please restore connectivity first.');
+            setIsSubmitting(false);
+            return;
+        }
+
+        offlineSync.addPendingOp('customer', 'insert', payload, payload.name);
+        alert(`You are offline. Customer "${payload.name}" was successfully created locally and will automatically synchronize when connection recovers.`);
+        setIsModalOpen(false);
+        setIsSubmitting(false);
+    };
+
+    if (!navigator.onLine) {
+        saveOffline();
+        return;
+    }
     
     try {
-      const isEditing = !!editingCustomer.id;
-      
-      const payload = {
-         name: editingCustomer.name,
-         phone: editingCustomer.phone,
-         address: editingCustomer.address,
-         credit_limit: editingCustomer.credit_limit || editingCustomer.creditLimit || 0,
-         diary_id: editingCustomer.diary_id || diaryId || null,
-      };
-
-      if (isEditing && editingCustomer.id) {
-         const { error } = await supabase.from('customers').update(payload).eq('id', editingCustomer.id);
+      if (isEditing) {
+         const payloadWithoutId = { ...payload };
+         delete payloadWithoutId.id;
+         const { error } = await supabase.from('customers').update(payloadWithoutId).eq('id', editingCustomer.id);
          if (error) throw error;
       } else {
-         const { error } = await supabase.from('customers').insert([payload]);
+         const payloadWithoutId = { ...payload };
+         delete payloadWithoutId.id;
+         const { error } = await supabase.from('customers').insert([payloadWithoutId]);
          if (error) throw error;
       }
       
@@ -120,7 +209,11 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
       await fetchCustomers();
     } catch (error: any) {
       console.error('Error saving customer:', error);
-      setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save customer');
+      if (isNetworkError(error)) {
+          saveOffline();
+      } else {
+          setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save customer');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -152,9 +245,24 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
             className="w-full h-12 pl-12 pr-4 bg-surface-container-lowest rounded-full border border-outline-variant/50 text-on-surface placeholder:text-on-surface-variant focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors"
           />
         </div>
-        <button className="h-12 px-6 rounded-full bg-surface-container flex items-center gap-2 text-on-surface whitespace-nowrap hover:bg-surface-container-high transition-colors text-sm border border-outline-variant/20">
+        <button 
+          onClick={() => {
+            setFilterType(prev => {
+              if (prev === 'ALL') return 'OUTSTANDING';
+              if (prev === 'OUTSTANDING') return 'OVER_LIMIT';
+              return 'ALL';
+            });
+          }}
+          className={`h-12 px-6 rounded-full flex items-center gap-2 text-sm border transition-colors whitespace-nowrap ${
+            filterType !== 'ALL' 
+              ? 'bg-secondary-container text-on-secondary-container border-secondary/30 font-bold' 
+              : 'bg-surface-container text-on-surface hover:bg-surface-container-high border-outline-variant/20 font-medium'
+          }`}
+        >
           <SlidersHorizontal size={18} />
-          Filter
+          {filterType === 'ALL' && 'All Customers'}
+          {filterType === 'OUTSTANDING' && 'Outstanding Balances'}
+          {filterType === 'OVER_LIMIT' && 'Over Limit Only'}
         </button>
       </div>
 
@@ -202,7 +310,14 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                           {c.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="text-[18px] font-bold text-primary tracking-tight">{c.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-[18px] font-bold text-primary tracking-tight">{c.name}</h3>
+                            {c.isPending && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse whitespace-nowrap">
+                                <WifiOff size={10} /> Pending Sync
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-on-surface-variant flex items-center gap-2 mt-1 font-medium">
                             <span className="flex items-center gap-1"><Phone size={12} className="text-outline" /> {c.phone || 'N/A'}</span>
                             <span className="text-outline-variant">•</span>
@@ -244,6 +359,21 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                 
                 <form onSubmit={(e) => { e.preventDefault(); handleSaveCustomer(); }}>
                 <div className="p-6 flex flex-col gap-5">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Assign to Diary <span className="text-error">*</span></label>
+                        <select 
+                            required 
+                            value={editingCustomer?.diary_id || ''} 
+                            onChange={(e) => setEditingCustomer({...editingCustomer, diary_id: e.target.value})} 
+                            className="w-full h-12 px-4 bg-surface-container/50 border border-outline-variant/60 rounded-lg text-sm font-bold text-on-surface focus:outline-none focus:border-secondary transition-colors"
+                        >
+                            <option value="" disabled>Select a Diary</option>
+                            {diaries.map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Customer Name <span className="text-error">*</span></label>
                         <input autoFocus required value={editingCustomer?.name || ''} onChange={(e) => setEditingCustomer({...editingCustomer, name: e.target.value})} className="w-full h-12 px-4 bg-surface-container/50 border border-outline-variant/60 rounded-lg text-sm font-bold text-on-surface focus:outline-none focus:border-secondary transition-colors" placeholder="e.g. B. Kumar Builders" />

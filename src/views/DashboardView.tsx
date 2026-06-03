@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, BadgeDollarSign, TrendingUp, Users, ArrowRight, Loader2 } from 'lucide-react';
+import { AlertTriangle, BadgeDollarSign, TrendingUp, Users, ArrowRight, Loader2, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function DashboardView({ navigateTo }: { navigateTo: any }) {
@@ -8,6 +8,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
   const [metrics, setMetrics] = useState({
      totalOutstanding: 0,
      activeCustomersCount: 0,
+     diariesCount: 0,
      todaysCollection: 0,
      monthlySales: 0,
      upcomingPayments: [] as any[],
@@ -22,18 +23,26 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
            const todayStr = new Date().toISOString().split('T')[0];
            const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
            
+           const firstDayOfMonth = `${currentMonth}-01`;
+           const dateObj = new Date();
+           const y = dateObj.getFullYear();
+           const m = dateObj.getMonth();
+           const lastDay = new Date(y, m + 1, 0).getDate();
+           const lastDayOfMonth = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
+
            const targetDate = new Date();
            targetDate.setDate(targetDate.getDate() + 7);
            const targetDateStr = targetDate.toISOString().split('T')[0];
 
            // Using Promise.all to fetch them concurrently for speed
-           const [balancesRes, customersRes, todaysCollectionRes, monthlySalesRes, upcomingRes, monthlyPaymentsRes] = await Promise.all([
+           const [balancesRes, customersRes, diariesRes, todaysCollectionRes, monthlySalesRes, upcomingRes, monthlyPaymentsRes] = await Promise.all([
                supabase.from('view_customer_balances').select('outstanding_balance'),
                supabase.from('customers').select('id', { count: 'exact', head: true }),
+               supabase.from('diaries').select('id', { count: 'exact', head: true }),
                supabase.from('payments').select('amount').eq('date', todayStr),
-               supabase.from('transactions').select('total_amount').gte('date', `${currentMonth}-01`).lte('date', `${currentMonth}-31`),
+               supabase.from('transactions').select('total_amount').gte('date', firstDayOfMonth).lte('date', lastDayOfMonth),
                supabase.from('transactions').select('id, due_date, total_amount, customers(id, name)').not('due_date', 'is', null).gte('due_date', todayStr).lte('due_date', targetDateStr).order('due_date', { ascending: true }).limit(5),
-               supabase.from('payments').select('amount').gte('date', `${currentMonth}-01`).lte('date', `${currentMonth}-31`)
+               supabase.from('payments').select('amount').gte('date', firstDayOfMonth).lte('date', lastDayOfMonth)
            ]);
 
            let totalOutstanding = 0;
@@ -42,6 +51,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
            }
            
            const activeCustomersCount = customersRes.count || 0;
+           const diariesCount = diariesRes.count || 0;
            
            let todaysCollection = 0;
            if (todaysCollectionRes.data) {
@@ -74,6 +84,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
            setMetrics({
                totalOutstanding,
                activeCustomersCount,
+               diariesCount,
                todaysCollection,
                monthlySales,
                upcomingPayments,
@@ -96,7 +107,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
       return <div className="flex-1 flex items-center justify-center pt-20 text-on-surface-variant font-medium gap-2"><Loader2 className="animate-spin" size={20}/> Loading dashboard...</div>;
   }
 
-  const { totalOutstanding, activeCustomersCount, todaysCollection, monthlySales, upcomingPayments, recoveryTarget, recoveredAmount } = metrics;
+  const { totalOutstanding, activeCustomersCount, diariesCount, todaysCollection, monthlySales, upcomingPayments, recoveryTarget, recoveredAmount } = metrics;
   
   const recoveryPercentage = recoveryTarget > 0 ? Math.round((recoveredAmount / recoveryTarget) * 100) : 0;
 
@@ -108,7 +119,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
           <p>{errorMsg}</p>
         </div>
       )}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Outstanding Card */}
         <div className="bg-primary text-on-primary rounded-xl p-6 flex flex-col justify-between shadow-md relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 opacity-10 transform group-hover:scale-110 transition-transform duration-500 pointer-events-none">
@@ -121,10 +132,10 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
           <div className="relative z-10">
              <div className="flex items-baseline gap-1">
                <span className="text-xl text-surface-variant font-medium">₹</span>
-               <span className="text-5xl font-label-numeric font-bold tracking-tight">{(totalOutstanding / 100000).toFixed(2)}</span>
+               <span className="text-4xl font-label-numeric font-bold tracking-tight">{(totalOutstanding / 100000).toFixed(2)}</span>
                <span className="text-xl text-surface-variant font-medium">Lakh</span>
              </div>
-             <p className="text-xs mt-1 text-primary-fixed-dim">Across {activeCustomersCount} active ledgers</p>
+             <p className="text-[11px] mt-1 text-primary-fixed-dim">Across {activeCustomersCount} buyers in {diariesCount} diaries</p>
           </div>
         </div>
 
@@ -153,6 +164,19 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
                <span className="text-xl text-on-surface-variant font-medium">₹</span>
                <span className="text-3xl font-label-numeric font-bold tracking-tight">{(monthlySales / 100000).toFixed(2)}</span>
                <span className="text-xl text-on-surface-variant font-medium">Lakh</span>
+             </div>
+           </div>
+        </div>
+
+        {/* Total Diaries */}
+        <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-container flex flex-col justify-between shadow-sm">
+           <div className="flex items-center gap-2 mb-4 text-secondary">
+             <BookOpen size={20} />
+             <h2 className="text-xs text-on-surface-variant uppercase tracking-wider font-medium">Total Diaries</h2>
+           </div>
+           <div>
+             <div className="text-on-surface">
+               <span className="text-3xl font-label-numeric font-bold tracking-tight">{diariesCount.toLocaleString()}</span>
              </div>
            </div>
         </div>

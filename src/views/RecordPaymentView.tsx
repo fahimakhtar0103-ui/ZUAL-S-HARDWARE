@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Save, Calendar, FileText, Smartphone } from 'lucide-react';
+import { Search, Save, Calendar, FileText, Smartphone, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AppContext } from '../types';
+import { offlineSync } from '../lib/offlineSync';
 
 export default function RecordPaymentView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -58,6 +59,42 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
     
     setIsSubmitting(true);
     setErrorMsg(null);
+
+    const isNetworkError = (error: any) => {
+        if (!navigator.onLine) return true;
+        const msg = (error?.message || '').toLowerCase();
+        return msg.includes('fetch') || msg.includes('network') || msg.includes('cors') || error?.status === 0;
+    };
+
+    const saveOffline = async () => {
+        try {
+            const userRes = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+            const userId = userRes?.data?.user?.id;
+
+            offlineSync.addPendingOp('payment', 'insert', {
+                customer_id: selectedCustomer.id,
+                recorded_by: userId,
+                amount: Number(amount),
+                payment_mode: paymentMode,
+                reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
+                date
+            }, selectedCustomer.name);
+
+            alert('You are offline or connection is weak. This payment transaction was saved locally and will auto-sync when online connection is restored.');
+            navigateTo('customer-ledger', { customerId: selectedCustomer.id });
+        } catch (offlineErr: any) {
+            console.error('Offline payment save error:', offlineErr);
+            setErrorMsg('Could not cache payment transaction locally.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!navigator.onLine) {
+        await saveOffline();
+        return;
+    }
+
     try {
         const userRes = await supabase.auth.getUser();
         const userId = userRes.data.user?.id;
@@ -76,10 +113,13 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
         navigateTo('customer-ledger', { customerId: selectedCustomer.id });
     } catch (error: any) {
         console.error('Error saving payment:', error);
-        setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save payment');
-        alert(`Save Error: ${error.message || error.details || JSON.stringify(error)}`);
-    } finally {
-        setIsSubmitting(false);
+        if (isNetworkError(error)) {
+            await saveOffline();
+        } else {
+            setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save payment');
+            alert(`Save Error: ${error.message || error.details || JSON.stringify(error)}`);
+            setIsSubmitting(false);
+        }
     }
   };
 

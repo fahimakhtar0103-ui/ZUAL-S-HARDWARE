@@ -44,7 +44,7 @@ export function Sidebar({ currentView, navigateTo }: NavigationProps) {
 
       <nav className="flex-1 px-4 flex flex-col gap-2 mt-8">
         {mainNav.map((item) => {
-          const isActive = currentView === item.id || (item.id === 'reports' && currentView === 'recovery-dashboard');
+          const isActive = currentView === item.id;
           return (
             <button
               key={item.id}
@@ -78,7 +78,7 @@ export function BottomNav({ currentView, navigateTo }: NavigationProps) {
     <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 rounded-t-xl bg-surface-container shadow-[0_-4px_6px_-1px_rgba(15,23,42,0.08)]">
       <div className="flex justify-around items-center h-16 px-2 pb-safe">
         {mainNav.map((item) => {
-          const isActive = currentView === item.id || (item.id === 'reports' && currentView === 'recovery-dashboard');
+          const isActive = currentView === item.id;
           return (
             <button
               key={item.id}

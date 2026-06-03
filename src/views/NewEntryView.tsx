@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Plus, Layers, Mountain, Package, Ruler, Save } from 'lucide-react';
+import { Search, X, Plus, Layers, Mountain, Package, Ruler, Save, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { TransactionItem } from '../db/schema';
+import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
 import { AppContext } from '../types';
 
 export default function NewEntryView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
+  const { isOnline } = useOnlineStatus();
   const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCustomersDropdown, setShowCustomersDropdown] = useState(false);
@@ -67,6 +69,54 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
     
     setIsSubmitting(true);
     setErrorMsg(null);
+
+    const isNetworkError = (error: any) => {
+        if (!navigator.onLine) return true;
+        const msg = (error?.message || '').toLowerCase();
+        return msg.includes('fetch') || msg.includes('network') || msg.includes('cors') || error?.status === 0;
+    };
+
+    const saveOffline = async () => {
+        try {
+            const userRes = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+            const userId = userRes?.data?.user?.id;
+            const validItems = items.map(({ id, ...rest }) => rest);
+            
+            offlineSync.addPendingOp('transaction', 'insert', {
+                customer_id: selectedCustomer.id,
+                recorded_by: userId,
+                total_amount: totalBill,
+                date,
+                due_date: dueDate || null,
+                items: validItems
+            }, selectedCustomer.name);
+
+            if (Number(cashPaid) > 0) {
+                offlineSync.addPendingOp('payment', 'insert', {
+                    customer_id: selectedCustomer.id,
+                    recorded_by: userId,
+                    amount: Number(cashPaid),
+                    payment_mode: 'Cash',
+                    reference_notes: 'Initial Payment (Offline)',
+                    date
+                }, selectedCustomer.name);
+            }
+
+            alert('You are currently offline or connection is unstable. Your entry has been saved locally and will sync automatically once network service is restored.');
+            navigateTo('customer-ledger', { customerId: selectedCustomer.id });
+        } catch (offlineErr: any) {
+            console.error('Offline save error:', offlineErr);
+            setErrorMsg('Failed to save operation to local cache');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!navigator.onLine) {
+        await saveOffline();
+        return;
+    }
+
     try {
         const userRes = await supabase.auth.getUser();
         const userId = userRes.data.user?.id;
@@ -97,10 +147,13 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
         navigateTo('customer-ledger', { customerId: selectedCustomer.id });
     } catch (error: any) {
         console.error('Error saving entry:', error);
-        setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save entry');
-        alert(`Save Error: ${error.message || error.details || JSON.stringify(error)}`);
-    } finally {
-        setIsSubmitting(false);
+        if (isNetworkError(error)) {
+            await saveOffline();
+        } else {
+            setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save entry');
+            alert(`Save Error: ${error.message || error.details || JSON.stringify(error)}`);
+            setIsSubmitting(false);
+        }
     }
   };
 

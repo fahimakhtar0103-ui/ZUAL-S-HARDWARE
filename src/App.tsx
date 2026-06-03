@@ -6,7 +6,6 @@ import { ViewState, AppContext } from './types';
 import DashboardView from './views/DashboardView';
 import DiariesView from './views/DiariesView';
 import ReportsView from './views/ReportsView';
-import RecoveryDashboardView from './views/RecoveryDashboardView';
 import SettingsView from './views/SettingsView';
 import CustomersView from './views/CustomersView';
 import CustomerLedgerView from './views/CustomerLedgerView';
@@ -16,9 +15,11 @@ import RecordPaymentView from './views/RecordPaymentView';
 import SearchView from './views/SearchView';
 import PaymentHistoryView from './views/PaymentHistoryView';
 import AuthView from './views/AuthView';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, WifiOff } from 'lucide-react';
+import { offlineSync, useOnlineStatus } from './lib/offlineSync';
 
 export default function App() {
+  const { isOnline, pendingCount, isSyncing } = useOnlineStatus();
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [context, setContext] = useState<AppContext>({});
   const [session, setSession] = useState<any>(null);
@@ -43,6 +44,42 @@ export default function App() {
       setUpdatingPassword(false);
     }
   };
+
+  const ensureUserRecord = async (user: any) => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.from('users').select('id').eq('id', user.id).maybeSingle();
+      if (error) {
+        console.error('Error checking user record:', error);
+        return;
+      }
+      if (!data) {
+        const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+        const email = user.email || '';
+        const role = 'Owner';
+        
+        const { error: insertError } = await supabase.from('users').insert([
+          { id: user.id, name, email, role }
+        ]);
+        if (insertError) {
+          console.error('Error inserting user record:', insertError);
+        } else {
+          console.log('Successfully created user record in public.users');
+        }
+      }
+    } catch (err) {
+      console.error('Exception in ensureUserRecord:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (session) {
+      console.log('[App] Session active, launching background offlineSync engine...');
+      ensureUserRecord(session.user).then(() => {
+        offlineSync.sync();
+      });
+    }
+  }, [session]);
 
   useEffect(() => {
     const checkHash = () => {
@@ -117,7 +154,7 @@ export default function App() {
   }
 
   // Define which views should omit the generic TopBar (they have custom headers or it's built-in)
-  const showTopBar = !['settings', 'reports', 'customers', 'recovery-dashboard', 'diaries', 'search'].includes(currentView);
+  const showTopBar = !['settings', 'reports', 'customers', 'diaries', 'search'].includes(currentView);
 
   return (
     <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col md:flex-row">
@@ -133,13 +170,34 @@ export default function App() {
            />
          )}
          
+         {/* Offline Sync Global Banner */}
+         {pendingCount > 0 && (
+           <div className={`fixed top-4 right-4 z-[999] flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg border text-xs font-bold transition-all duration-300 ${
+             isSyncing 
+               ? 'bg-blue-600 border-blue-500 text-white animate-pulse' 
+               : isOnline 
+                 ? 'bg-green-700 border-green-600 text-white' 
+                 : 'bg-amber-600 border-amber-500 text-white'
+           }`}>
+             <WifiOff size={14} className={isSyncing ? "animate-spin" : isOnline ? "" : "animate-bounce"} />
+             <span>
+               {isSyncing 
+                 ? `Syncing ${pendingCount} offline records...` 
+                 : isOnline 
+                   ? `Restored! Syncing ${pendingCount} records...` 
+                   : `Offline Mode — ${pendingCount} records cached`
+               }
+             </span>
+           </div>
+         )}
+         
          <div className="flex-1 overflow-y-auto hide-scrollbar relative">
             {currentView === 'dashboard' && <DashboardView navigateTo={navigateTo} />}
             {currentView === 'diaries' && <DiariesView navigateTo={navigateTo} />}
             {currentView === 'customers' && <CustomersView navigateTo={navigateTo} />}
             {currentView === 'reports' && <ReportsView navigateTo={navigateTo} />}
             {currentView === 'settings' && <SettingsView />}
-            {currentView === 'recovery-dashboard' && <RecoveryDashboardView navigateTo={navigateTo} />}
+            
             {currentView === 'customer-ledger' && <CustomerLedgerView navigateTo={navigateTo} context={context} />}
             {currentView === 'new-entry' && <NewEntryView navigateTo={navigateTo} context={context} />}
             {currentView === 'whatsapp-reminder' && <WhatsAppReminderView navigateTo={navigateTo} context={context} />}
