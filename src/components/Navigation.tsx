@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, BookOpen, Users, LineChart, Settings, ShoppingCart, CreditCard, Package, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, LineChart, Settings, ShoppingCart, CreditCard, Package, ReceiptText, BadgeDollarSign } from 'lucide-react';
 import { NavigationProps } from '../types';
 
 export function Sidebar({ currentView, navigateTo }: NavigationProps) {
@@ -8,6 +8,7 @@ export function Sidebar({ currentView, navigateTo }: NavigationProps) {
     { id: 'diaries', label: 'Diaries', icon: BookOpen },
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'reports', label: 'Reports', icon: LineChart },
+    { id: 'recovery-dashboard', label: 'Recovery Dashboard', icon: BadgeDollarSign },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 

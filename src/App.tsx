@@ -15,6 +15,7 @@ import RecordPaymentView from './views/RecordPaymentView';
 import SearchView from './views/SearchView';
 import PaymentHistoryView from './views/PaymentHistoryView';
 import AuthView from './views/AuthView';
+import RecoveryDashboardView from './views/RecoveryDashboardView';
 import { Plus, Loader2, WifiOff } from 'lucide-react';
 import { offlineSync, useOnlineStatus } from './lib/offlineSync';
 
@@ -154,14 +155,14 @@ export default function App() {
   }
 
   // Define which views should omit the generic TopBar (they have custom headers or it's built-in)
-  const showTopBar = !['settings', 'reports', 'customers', 'diaries', 'search'].includes(currentView);
-  const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history'].includes(currentView);
+  const showTopBar = !['settings', 'reports', 'customers', 'diaries', 'search', 'recovery-dashboard'].includes(currentView);
+  const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history', 'recovery-dashboard'].includes(currentView);
 
   return (
-    <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col md:flex-row">
+    <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col md:flex-row overflow-x-hidden">
       <Sidebar currentView={currentView} navigateTo={navigateTo} />
       
-      <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative">
+      <main className="flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-screen w-full max-w-full overflow-x-hidden">
          {showTopBar && (
            <TopBar 
              currentView={currentView} 
@@ -192,11 +193,12 @@ export default function App() {
            </div>
          )}
          
-         <div className="flex-1 overflow-y-auto hide-scrollbar relative">
+         <div className="flex-1 overflow-y-auto md:hide-scrollbar relative touch-pan-y scroll-smooth">
             {currentView === 'dashboard' && <DashboardView navigateTo={navigateTo} />}
             {currentView === 'diaries' && <DiariesView navigateTo={navigateTo} />}
             {currentView === 'customers' && <CustomersView navigateTo={navigateTo} />}
             {currentView === 'reports' && <ReportsView navigateTo={navigateTo} />}
+             {currentView === 'recovery-dashboard' && <RecoveryDashboardView navigateTo={navigateTo} />}
             {currentView === 'settings' && <SettingsView />}
             
             {currentView === 'customer-ledger' && <CustomerLedgerView navigateTo={navigateTo} context={context} />}
@@ -206,7 +208,7 @@ export default function App() {
             {currentView === 'search' && <SearchView navigateTo={navigateTo} />}
             {currentView === 'payment-history' && <PaymentHistoryView navigateTo={navigateTo} />}
 
-            <div className="h-24 md:h-12"></div>
+            <div className="h-32 md:h-12 flex-shrink-0"></div>
          </div>
 
          {!showBack && <BottomNav currentView={currentView} navigateTo={navigateTo} />}

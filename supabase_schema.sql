@@ -2,6 +2,35 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ==========================================
+-- 0.1. USERS TABLE
+-- Stores public user meta profiles after Auth registration.
+-- ==========================================
+CREATE TABLE users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT DEFAULT 'Owner',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==========================================
+-- 0.2. APP_SETTINGS TABLE
+-- Stores custom enterprise/shop preferences.
+-- ==========================================
+CREATE TABLE app_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+  shop_name TEXT,
+  owner_name TEXT,
+  address TEXT,
+  logo_url TEXT,
+  dark BOOLEAN DEFAULT FALSE,
+  daily BOOLEAN DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ==========================================
 -- 1. DIARIES TABLE
 -- Groups customers/ledgers.
 -- ==========================================
@@ -110,6 +139,8 @@ LEFT JOIN (
 -- 7. ROW LEVEL SECURITY (RLS)
 -- Enables strict multi-tenant or user-based security.
 -- ==========================================
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE diaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -118,6 +149,8 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 
 -- Basic default policies (allow authenticated access).
 -- Further refinement required depending on the exact tenancy model (e.g. `using (created_by = auth.uid())`)
+CREATE POLICY "Allow authenticated full access users" ON users FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow authenticated full access app_settings" ON app_settings FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated full access diaries" ON diaries FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated full access customers" ON customers FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authenticated full access products" ON products FOR ALL USING (auth.role() = 'authenticated');

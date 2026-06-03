@@ -124,7 +124,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
   };
 
   return (
-    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-16 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
+    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-32 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
       <section className="space-y-6">
         {errorMsg && (
             <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20 mb-4">

@@ -197,7 +197,7 @@ export default function DashboardView({ navigateTo }: { navigateTo: any }) {
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recovery Target */}
-        <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-container shadow-sm flex flex-col cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigateTo('reports')}>
+        <div className="bg-surface-container-lowest rounded-xl p-6 border border-surface-container shadow-sm flex flex-col cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigateTo('recovery-dashboard')}>
           <h3 className="text-xl font-semibold text-on-surface mb-6">Recovery Target</h3>
           <div className="flex-grow flex flex-col items-center justify-center">
              <div className="relative w-48 h-48 rounded-full flex items-center justify-center shadow-sm" style={{ background: `conic-gradient(#000000 ${recoveryPercentage}%, #e0e3e5 0)` }}>
