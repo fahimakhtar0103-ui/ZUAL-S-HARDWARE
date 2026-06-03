@@ -124,7 +124,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
   };
 
   return (
-    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-48 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
+    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-16 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
       <section className="space-y-6">
         {errorMsg && (
             <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20 mb-4">
@@ -247,25 +247,25 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
          </div>
       </section>
 
-      <footer className="fixed bottom-0 left-0 w-full bg-surface-container-lowest shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.1)] z-50 p-4 md:p-6 pb-safe border-t border-outline-variant/20">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-           <div>
-              <div className="text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Remaining Due</div>
-              <div className="font-label-numeric text-[28px] font-bold tracking-tight text-on-surface leading-none">
-                ₹ {selectedCustomer ? remainingDue.toLocaleString() : '0'}
-                {remainingDue < 0 && <span className="text-sm ml-2 font-medium text-error">(Surplus)</span>}
-              </div>
-           </div>
-           
-           <button 
-             onClick={handleSave} 
-             disabled={isSubmitting || !selectedCustomer || !amount}
-             className="h-14 px-8 md:px-10 bg-primary text-on-primary text-[17px] font-bold rounded-xl shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-           >
-             <Save size={20} fill="currentColor" /> {isSubmitting ? 'Saving...' : 'Save Payment'}
-           </button>
-        </div>
-      </footer>
+      <div className="bg-surface-container border border-surface-variant/80 rounded-2xl shadow-md p-5 md:p-8 mt-12 relative z-10 transition-all">
+         <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div>
+               <div className="text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Remaining Due</div>
+               <div className="font-label-numeric text-[32px] font-bold tracking-tight text-on-surface mt-1 leading-none">
+                 ₹ {selectedCustomer ? remainingDue.toLocaleString() : '0'}
+                 {remainingDue < 0 && <span className="text-sm ml-2 font-medium text-error">(Surplus)</span>}
+               </div>
+            </div>
+            
+            <button 
+              onClick={handleSave} 
+              disabled={isSubmitting || !selectedCustomer || !amount}
+              className="w-full sm:w-auto h-14 px-8 md:px-10 bg-primary text-on-primary text-[17px] font-bold rounded-xl shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save size={20} fill="currentColor" /> {isSubmitting ? 'Saving...' : 'Save Payment'}
+            </button>
+         </div>
+      </div>
     </div>
   )
 }

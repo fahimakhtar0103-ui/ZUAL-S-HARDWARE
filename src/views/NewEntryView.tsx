@@ -169,7 +169,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
   };
 
   return (
-    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-48 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
+    <div className="flex-1 w-full max-w-3xl mx-auto p-4 md:p-12 space-y-8 pb-16 selection:bg-secondary-fixed selection:text-on-secondary-fixed relative">
       <section className="space-y-5">
         {errorMsg && (
             <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20">
@@ -302,38 +302,36 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
         </button>
       </section>
 
-      <footer className="fixed bottom-0 left-0 w-full bg-surface-container shadow-[0_-8px_16px_-4px_rgba(15,23,42,0.1)] rounded-t-2xl z-50 p-4 md:p-6 md:pb-8 pb-safe border-t border-surface-variant">
-        <div className="max-w-3xl mx-auto">
-           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 items-end">
-              <div className="md:col-span-2 hidden md:block"></div>
-              <div className="col-span-1">
-                 <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-widest">Total Bill</label>
-                 <div className="font-label-numeric text-[26px] text-on-surface font-bold tracking-tight leading-none">₹ {totalBill.toLocaleString()}</div>
-              </div>
-              <div className="col-span-1">
-                 <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-widest">Cash Paid (₹)</label>
-                 <input value={cashPaid} onChange={e => setCashPaid(e.target.value === '' ? '' : Number(e.target.value))} className="w-full h-11 px-3 bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-label-numeric font-bold text-lg text-right" type="number" placeholder="0" />
-              </div>
-           </div>
-           
-           <div className={`flex flex-col md:flex-row md:items-center justify-between rounded-xl p-5 shadow-sm gap-4 md:gap-0 ${finalDue > 0 ? 'bg-error-container text-on-error-container' : 'bg-secondary-container text-on-secondary-container'}`}>
-              <div>
-                 <div className="text-[11px] opacity-80 uppercase tracking-widest font-bold">{finalDue > 0 ? 'Final Due' : 'Fully Paid'}</div>
-                 <div className="font-label-numeric text-[32px] md:text-[36px] font-bold tracking-tight mt-0.5 leading-none">
-                     ₹ {Math.abs(finalDue).toLocaleString()}
-                     {finalDue < 0 && <span className="text-sm ml-2 font-medium">(Surplus)</span>}
-                 </div>
-              </div>
-              <button 
-                onClick={handleSave} 
-                disabled={isSubmitting}
-                className={`h-14 px-8 md:px-10 text-[17px] font-bold rounded-lg shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 ${finalDue > 0 ? 'bg-on-error-container text-error-container' : 'bg-secondary text-on-secondary'} disabled:opacity-50`}
-              >
-                <Save size={20} fill="currentColor" /> {isSubmitting ? 'Saving...' : 'Save Entry'}
-              </button>
-           </div>
-        </div>
-      </footer>
+      <div className="bg-surface-container border border-surface-variant/80 rounded-2xl shadow-md p-5 md:p-8 space-y-6 mt-12 relative z-10 transition-all">
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+            <div className="md:col-span-2 hidden md:block"></div>
+            <div className="col-span-1">
+               <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Total Bill</label>
+               <div className="font-label-numeric text-[26px] text-on-surface font-bold tracking-tight leading-none">₹ {totalBill.toLocaleString()}</div>
+            </div>
+            <div className="col-span-1">
+               <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Cash Paid (₹)</label>
+               <input value={cashPaid} onChange={e => setCashPaid(e.target.value === '' ? '' : Number(e.target.value))} className="w-full h-11 px-3 bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-label-numeric font-bold text-lg text-right" type="number" placeholder="0" />
+            </div>
+         </div>
+         
+         <div className={`flex flex-col md:flex-row md:items-center justify-between rounded-xl p-5 shadow-sm gap-4 md:gap-0 ${finalDue > 0 ? 'bg-error-container text-on-error-container' : 'bg-secondary-container text-on-secondary-container'}`}>
+            <div>
+               <div className="text-[11px] opacity-80 uppercase tracking-widest font-bold">{finalDue > 0 ? 'Final Due' : 'Fully Paid'}</div>
+               <div className="font-label-numeric text-[32px] md:text-[36px] font-bold tracking-tight mt-0.5 leading-none">
+                   ₹ {Math.abs(finalDue).toLocaleString()}
+                   {finalDue < 0 && <span className="text-sm ml-2 font-medium">(Surplus)</span>}
+               </div>
+            </div>
+            <button 
+              onClick={handleSave} 
+              disabled={isSubmitting}
+              className={`h-14 px-8 md:px-10 text-[17px] font-bold rounded-lg shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 ${finalDue > 0 ? 'bg-on-error-container text-error-container' : 'bg-secondary text-on-secondary'} disabled:opacity-50`}
+            >
+              <Save size={20} fill="currentColor" /> {isSubmitting ? 'Saving...' : 'Save Entry'}
+            </button>
+         </div>
+      </div>
     </div>
   )
 }

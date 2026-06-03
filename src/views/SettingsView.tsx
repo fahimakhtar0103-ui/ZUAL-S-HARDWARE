@@ -36,6 +36,13 @@ export default function SettingsView() {
              if (parsed.logoUrl) setLogoUrl(parsed.logoUrl);
              if (parsed.dark !== undefined) setDark(parsed.dark);
              if (parsed.daily !== undefined) setDaily(parsed.daily);
+             
+             // Apply dark mode immediately
+             if (parsed.dark) {
+                 document.documentElement.classList.add('dark');
+             } else {
+                 document.documentElement.classList.remove('dark');
+             }
          } catch(e) {}
       }
 
@@ -47,15 +54,41 @@ export default function SettingsView() {
         .eq('user_id', user.user.id)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') throw error;
+      const isTableMissing = error && (
+          error.code === 'PGRST205' || 
+          error.code === '42P01' || 
+          error.message?.includes('relation "public.app_settings" does not exist') ||
+          error.message?.includes('does not exist')
+      );
+
+      if (error && !isTableMissing && error.code !== 'PGRST116') throw error;
       
       if (data) {
-         setShopName(data.shop_name || '');
-         setOwnerName(data.owner_name || '');
-         setAddress(data.address || '');
-         setLogoUrl(data.logo_url || null);
-         setDark(data.dark || false);
-         setDaily(data.daily !== false);
+         if (data.shop_name !== undefined && data.shop_name !== null) setShopName(data.shop_name);
+         if (data.owner_name !== undefined && data.owner_name !== null) setOwnerName(data.owner_name);
+         if (data.address !== undefined && data.address !== null) setAddress(data.address);
+         if (data.logo_url !== undefined && data.logo_url !== null) setLogoUrl(data.logo_url);
+         
+         // Support either "dark" or "dark_mode" column names
+         if (data.dark !== undefined && data.dark !== null) {
+            setDark(data.dark);
+         } else if (data.dark_mode !== undefined && data.dark_mode !== null) {
+            setDark(data.dark_mode);
+         }
+
+         if (data.daily !== undefined && data.daily !== null) {
+            setDaily(data.daily);
+         }
+
+         // Update local storage
+         localStorage.setItem('shopSettings', JSON.stringify({
+             shopName: data.shop_name || shopName,
+             ownerName: data.owner_name || ownerName,
+             address: data.address || address,
+             logoUrl: data.logo_url || logoUrl,
+             dark: (data.dark !== undefined ? data.dark : data.dark_mode) || false,
+             daily: data.daily !== false
+         }));
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -79,10 +112,26 @@ export default function SettingsView() {
   const saveSettings = async () => {
       setIsSaving(true);
       try {
-          const { data: user } = await supabase.auth.getUser();
-          if (!user.user) throw new Error("Not authenticated");
+          // Always apply dark mode instantly in UI
+          if (dark) {
+              document.documentElement.classList.add('dark');
+          } else {
+              document.documentElement.classList.remove('dark');
+          }
 
-          const payload = {
+          // Always backup locally first so the user never loses their changes
+          localStorage.setItem('shopSettings', JSON.stringify({
+              shopName, ownerName, address, logoUrl, dark, daily
+          }));
+
+          const { data: user } = await supabase.auth.getUser();
+          if (!user.user) {
+              alert('Settings saved locally! (You are not authenticated with Supabase)');
+              setIsSaving(false);
+              return;
+          }
+
+          const fullPayload = {
               shop_name: shopName,
               owner_name: ownerName,
               address: address,
@@ -95,30 +144,80 @@ export default function SettingsView() {
 
           const { data: existing, error: existingError } = await supabase.from('app_settings').select('id').eq('user_id', user.user.id).maybeSingle();
           
-          if (existingError && existingError.code === 'PGRST205') {
-              // Table doesn't exist, fallback to local storage
+          const isTableMissing = existingError && (
+              existingError.code === 'PGRST205' || 
+              existingError.code === '42P01' || 
+              existingError.message?.includes('relation "public.app_settings" does not exist') ||
+              existingError.message?.includes('does not exist')
+          );
+
+          if (isTableMissing) {
               console.warn('Table app_settings not found. Falling back to local storage.');
-              localStorage.setItem('shopSettings', JSON.stringify({
-                  shopName, ownerName, address, logoUrl, dark, daily
-              }));
-              alert('Settings saved locally. Please run the SQL migration to create app_settings table in Supabase.');
+              alert('Settings saved locally! (Note: The "app_settings" table does not exist in your Supabase database)');
               setIsSaving(false);
               return;
           }
+
           if (existingError && existingError.code !== 'PGRST116') throw existingError;
           
-          if (existing) {
-              const { error } = await supabase.from('app_settings').update(payload).eq('id', existing.id);
-              if (error) throw error;
-          } else {
-              const { error } = await supabase.from('app_settings').insert([payload]);
-              if (error) throw error;
+          // Helper to extract missing column from PostgREST/PostgreSQL error messages list
+          const getMissingColumnFromError = (message: string): string | null => {
+              if (!message) return null;
+              const m1 = message.match(/Could not find the '([^']+)' column/i);
+              if (m1 && m1[1]) return m1[1];
+              const m2 = message.match(/column "([^"]+)"/i);
+              if (m2 && m2[1]) return m2[1];
+              const m3 = message.match(/column '([^']+)'/i);
+              if (m3 && m3[1]) return m3[1];
+              return null;
+          };
+
+          let currentPayload: any = { ...fullPayload };
+          let success = false;
+          let attempt = 0;
+          let lastErrorMsg = '';
+
+          while (attempt < 10 && !success) {
+              attempt++;
+              let saveResult;
+              if (existing) {
+                  saveResult = await supabase.from('app_settings').update(currentPayload).eq('id', existing.id);
+              } else {
+                  saveResult = await supabase.from('app_settings').insert([currentPayload]);
+              }
+
+              if (saveResult.error) {
+                  const errMsg = saveResult.error.message || '';
+                  lastErrorMsg = errMsg;
+                  console.warn(`Database save attempt ${attempt} failed:`, errMsg);
+
+                  const missingCol = getMissingColumnFromError(errMsg);
+                  if (missingCol && (missingCol in currentPayload)) {
+                      console.info(`Pruning missing column "${missingCol}" from settings payload and retrying...`);
+                      delete currentPayload[missingCol];
+                      
+                      // Fallback: if 'dark' is missing, try adding 'dark_mode' as alias
+                      if (missingCol === 'dark') {
+                          currentPayload.dark_mode = dark;
+                      }
+                      continue;
+                  } else {
+                      // Propagate unrecognized errors
+                      throw saveResult.error;
+                  }
+              } else {
+                  success = true;
+              }
           }
-          
-          alert('Settings saved successfully!');
+
+          if (success) {
+              alert('Settings saved successfully in Supabase & locally!');
+          } else {
+              throw new Error(lastErrorMsg || 'Unknown save error');
+          }
       } catch (error: any) {
-          console.error("Error saving settings:", error);
-          alert('Failed to save settings: ' + error.message);
+          console.error("Error saving settings to Supabase:", error);
+          alert('Settings saved locally! (Could not sync with Supabase: ' + error.message + ')');
       } finally {
           setIsSaving(false);
       }
@@ -343,21 +442,21 @@ export default function SettingsView() {
               <div className="flex flex-col gap-6">
                  <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Shop Name</label>
-                    <input value={shopName} onChange={e => setShopName(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[15px] font-bold text-on-surface focus:border-secondary transition-all shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" type="text" />
+                    <input id="shop-name-input" value={shopName} onChange={e => setShopName(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[15px] font-bold text-on-surface focus:border-secondary transition-all shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" type="text" />
                  </div>
                  <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Owner Name</label>
-                    <input value={ownerName} onChange={e => setOwnerName(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[15px] font-bold text-on-surface focus:border-secondary transition-all shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" type="text" />
+                    <input id="owner-name-input" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[15px] font-bold text-on-surface focus:border-secondary transition-all shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" type="text" />
                  </div>
                  <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Business Address (For Invoices)</label>
-                    <textarea value={address} onChange={e => setAddress(e.target.value)} className="w-full p-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[14px] font-medium text-on-surface focus:border-secondary transition-all resize-none shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" rows={3} />
+                    <textarea id="business-address-input" value={address} onChange={e => setAddress(e.target.value)} className="w-full p-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg text-[14px] font-medium text-on-surface focus:border-secondary transition-all resize-none shadow-sm focus:outline-none focus:ring-1 focus:ring-secondary" rows={3} />
                  </div>
               </div>
               
               <div className="flex flex-col gap-1.5 h-full">
                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Shop Logo</label>
-                 <div onClick={() => fileInputRef.current?.click()} className="flex-grow border-2 border-dashed border-outline-variant/50 rounded-xl bg-surface-container-low/50 flex flex-col items-center justify-center gap-3 p-6 min-h-[200px] hover:bg-surface-container-low transition-colors cursor-pointer group relative overflow-hidden">
+                 <div id="logo-upload-box" onClick={() => fileInputRef.current?.click()} className="flex-grow border-2 border-dashed border-outline-variant/50 rounded-xl bg-surface-container-low/50 flex flex-col items-center justify-center gap-3 p-6 min-h-[200px] hover:bg-surface-container-low transition-colors cursor-pointer group relative overflow-hidden">
                     {logoUrl ? (
                         <img src={logoUrl} alt="Logo" className="w-32 h-32 object-contain rounded-lg shadow-sm" />
                     ) : (
@@ -370,12 +469,12 @@ export default function SettingsView() {
                         </>
                     )}
                  </div>
-                 <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleLogoUpload} />
+                 <input id="logo-file-input" type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleLogoUpload} />
               </div>
            </div>
            
            <div className="flex justify-end mt-2 pt-6 border-t border-surface-variant/70">
-              <button disabled={isSaving} onClick={saveSettings} className="h-12 px-8 bg-primary text-on-primary rounded-lg text-[14px] font-bold hover:bg-inverse-surface transition-colors shadow-md transform hover:-translate-y-[1px] disabled:opacity-50 flex items-center gap-2">
+              <button id="save-settings-btn" disabled={isSaving} onClick={saveSettings} className="h-12 px-8 bg-primary text-on-primary rounded-lg text-[14px] font-bold hover:bg-inverse-surface transition-colors shadow-md transform hover:-translate-y-[1px] disabled:opacity-50 flex items-center gap-2">
                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : null} Save Profile Changes
               </button>
            </div>
@@ -418,7 +517,7 @@ export default function SettingsView() {
                     <span className="text-[16px] font-bold text-on-surface tracking-tight">Dark Mode</span>
                     <span className="text-[13px] font-medium text-on-surface-variant mt-0.5">Switch interface theme</span>
                  </div>
-                 <button onClick={() => setDark(!dark)} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${dark ? 'bg-secondary' : 'bg-surface-variant'}`}>
+                 <button id="dark-mode-toggle-btn" onClick={() => setDark(!dark)} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${dark ? 'bg-secondary' : 'bg-surface-variant'}`}>
                     <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${dark ? 'left-[26px]' : 'left-1'}`}></span>
                  </button>
               </div>
@@ -428,7 +527,7 @@ export default function SettingsView() {
                     <span className="text-[16px] font-bold text-on-surface tracking-tight">Daily Summary Notifications</span>
                     <span className="text-[13px] font-medium text-on-surface-variant mt-0.5">Push alerts at closing</span>
                  </div>
-                 <button onClick={() => setDaily(!daily)} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${daily ? 'bg-secondary' : 'bg-surface-variant'}`}>
+                 <button id="daily-summary-toggle-btn" onClick={() => setDaily(!daily)} className={`w-12 h-6 rounded-full relative transition-colors shadow-inner ${daily ? 'bg-secondary' : 'bg-surface-variant'}`}>
                     <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow-md ${daily ? 'left-[26px]' : 'left-1'}`}></span>
                  </button>
               </div>

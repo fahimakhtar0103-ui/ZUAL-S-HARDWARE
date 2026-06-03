@@ -155,6 +155,7 @@ export default function App() {
 
   // Define which views should omit the generic TopBar (they have custom headers or it's built-in)
   const showTopBar = !['settings', 'reports', 'customers', 'diaries', 'search'].includes(currentView);
+  const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history'].includes(currentView);
 
   return (
     <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col md:flex-row">
@@ -166,7 +167,7 @@ export default function App() {
              currentView={currentView} 
              navigateTo={navigateTo} 
              context={context}
-             showBack={['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history'].includes(currentView)} 
+             showBack={showBack} 
            />
          )}
          
@@ -208,7 +209,7 @@ export default function App() {
             <div className="h-24 md:h-12"></div>
          </div>
 
-         <BottomNav currentView={currentView} navigateTo={navigateTo} />
+         {!showBack && <BottomNav currentView={currentView} navigateTo={navigateTo} />}
          
          {/* Global FAB */}
          {['dashboard', 'diaries', 'customers'].includes(currentView) && (
