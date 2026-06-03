@@ -255,7 +255,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                           ) : (
                               <div>
                                  <div className="flex items-center gap-2 text-[14px] font-bold text-green-700">
-                                     <CreditCard size={16} /> Payment Received ({row.mode})
+                                     <CreditCard size={16} /> Payment Received ({row.mode || 'Cash'})
                                      {row.isPending && (
                                        <span className="inline-flex items-center gap-1 text-[9px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse ml-2">
                                           <WifiOff size={10} /> Sync Pending

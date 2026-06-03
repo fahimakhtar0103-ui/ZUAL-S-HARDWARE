@@ -16,6 +16,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
   // Edit diary state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingDiary, setEditingDiary] = useState<any>(null);
+  const [diaryToDelete, setDiaryToDelete] = useState<string | null>(null);
 
   const fetchDiaries = async () => {
     setLoading(true);
@@ -121,17 +122,31 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
     }
   };
 
-  const handleDeleteDiary = async (id: string) => {
-      if (!window.confirm('Are you sure you want to delete this diary? This will permanently delete all associated customers and transactions.')) return;
+  const handleDeleteDiaryClick = (id: string) => {
+      setDiaryToDelete(id);
+  };
+
+  const confirmDeleteDiary = async () => {
+      if (!diaryToDelete) return;
+      const id = diaryToDelete;
       setErrorMsg(null);
       try {
+        const { data: diaryCustomers } = await supabase.from('customers').select('id').eq('diary_id', id);
+        if (diaryCustomers && diaryCustomers.length > 0) {
+           const custIds = diaryCustomers.map(c => c.id);
+           await supabase.from('transactions').delete().in('customer_id', custIds);
+           await supabase.from('payments').delete().in('customer_id', custIds);
+           await supabase.from('customers').delete().in('id', custIds);
+        }
         const { error } = await supabase.from('diaries').delete().eq('id', id);
         if (error) throw error;
         await fetchDiaries();
+        setDiaryToDelete(null);
       } catch (error: any) {
         console.error('Error deleting diary:', error);
         setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to delete diary');
         alert(`Delete Error: ${error.message || 'Failed to delete diary'}`);
+        setDiaryToDelete(null);
       }
   };
 
@@ -188,7 +203,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
                        <MoreVertical size={18} />
                      </button>
                      <button 
-                         onClick={(e) => { e.stopPropagation(); handleDeleteDiary(diary.id); }}
+                         onClick={(e) => handleDeleteDiaryClick(diary.id, e)}
                          className="text-error md:opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-error-container/30 rounded-full ml-1"
                          title="Delete diary"
                      >
@@ -325,6 +340,25 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Delete Diary Modal */}
+      {diaryToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Diary</h3>
+                <p className="text-sm text-on-surface-variant mb-6 text-balance">
+                    Are you sure you want to delete this diary? This will permanently delete all associated customers, transactions, and payments.
+                </p>
+                <div className="flex gap-3 justify-end mt-2">
+                    <button onClick={() => setDiaryToDelete(null)} className="px-5 py-2.5 rounded-xl font-bold text-on-surface bg-surface-container hover:bg-surface-variant transition-colors" disabled={isSubmitting}>
+                        Cancel
+                    </button>
+                    <button onClick={confirmDeleteDiary} className="px-5 py-2.5 rounded-xl font-bold text-on-error bg-error hover:bg-error/90 transition-colors shadow-sm" disabled={isSubmitting}>
+                        Delete
+                    </button>
+                </div>
+            </div>
         </div>
       )}
     </div>

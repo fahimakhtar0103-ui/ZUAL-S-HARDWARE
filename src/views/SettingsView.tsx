@@ -623,6 +623,109 @@ export default function SettingsView() {
     }
   };
 
+  const handleExportPaymentsPDF = async () => {
+    setIsExportingPDF(true);
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const { data: paymentsData, error } = await supabase
+        .from("payments")
+        .select(`*, customers (name)`)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedData = paymentsData.map((p: any) => ({
+        ...p,
+        customerName: p.customers?.name || "Unknown",
+      }));
+
+      const doc = new jsPDF();
+      doc.setFontSize(20);
+      doc.setTextColor(26, 54, 93);
+      doc.text("Payment History Report", 14, 20);
+
+      doc.setFontSize(10);
+      doc.setTextColor(115, 115, 115);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Shop: ${shopName}`, 14, 34);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.line(14, 38, 196, 38);
+
+      const columns = ["Date", "Customer", "Mode", "Amount (RS)", "Notes"];
+      const rows = formattedData.map((p) => [
+        p.date ? new Date(p.date).toLocaleDateString() : "",
+        p.customerName,
+        p.payment_mode || "Cash",
+        p.amount ? p.amount.toLocaleString() : "0",
+        p.reference_notes || "",
+      ]);
+
+      autoTable(doc, {
+        startY: 44,
+        head: [columns],
+        body: rows,
+        theme: "striped",
+        headStyles: { fillColor: [26, 54, 93] },
+        styles: { font: "helvetica", fontSize: 9 },
+      });
+
+      doc.save(`Payment_History_Report_${Date.now()}.pdf`);
+      setExportSuccess(
+        `Payment History PDF Report generated and downloaded successfully!`,
+      );
+    } catch (error: any) {
+      console.error("PDF Export failed:", error);
+      setExportError(
+        `PDF Export failed: ${error.message || error.details || "Unknown error"}`,
+      );
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+  const handleExportPaymentsExcel = async () => {
+    setIsExportingExcel(true);
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const { data: paymentsData, error } = await supabase
+        .from("payments")
+        .select(`*, customers (name)`)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedData = paymentsData.map((p: any) => ({
+        Date: p.date ? new Date(p.date).toLocaleDateString() : "",
+        Customer: p.customers?.name || "Unknown",
+        Mode: p.payment_mode || "Cash",
+        "Amount (RS)": p.amount || 0,
+        Notes: p.reference_notes || "",
+      }));
+
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+
+      const ws = XLSX.utils.json_to_sheet(
+        formattedData.length > 0 ? formattedData : [{ status: "No record found" }],
+      );
+      XLSX.utils.book_append_sheet(wb, ws, "Payment History");
+
+      XLSX.writeFile(wb, `Payment_History_Report_${Date.now()}.xlsx`);
+
+      setExportSuccess(`Payment History Excel Report generated successfully!`);
+    } catch (error: any) {
+      console.error("Excel Export failed:", error);
+      setExportError(
+        `Excel Export failed: ${error.message || error.details || "Unknown error"}`,
+      );
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   return (
     <div className="flex-grow px-4 md:px-12 py-6 md:py-8 pb-32 max-w-7xl mx-auto w-full">
       <header className="mb-8 flex justify-between items-start">
@@ -932,6 +1035,57 @@ export default function SettingsView() {
                 : csvTableOption === "unified_json"
                   ? "Download DB JSON Backup File"
                   : "Download Table Export (CSV)"}
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-secondary-container text-on-secondary-container rounded-xl p-6 md:p-8 shadow-lg flex flex-col gap-6 relative overflow-hidden">
+          <FileText
+            className="absolute -right-6 -bottom-6 opacity-10"
+            size={160}
+          />
+          <div className="flex items-center gap-3 pb-5 border-b border-on-secondary-container/20 relative z-10">
+            <FileText className="text-secondary" size={26} />
+            <h3 className="text-[20px] font-bold tracking-tight">
+              Payment History Reports
+            </h3>
+          </div>
+
+          <div className="flex flex-col gap-5 relative z-10 pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[13px] font-bold tracking-wide text-on-secondary-container/80">
+                Generate formatted reports for all payments
+              </span>
+            </div>
+
+            <button
+              onClick={handleExportPaymentsPDF}
+              disabled={isExportingPDF || isExportingCSV || isExportingExcel}
+              className="h-12 w-full bg-surface-container-lowest border border-outline-variant/30 text-primary rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {isExportingPDF ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <FileText size={20} />
+              )}
+              {isExportingPDF
+                ? "Exporting PDF..."
+                : "Generate Payment History (PDF)"}
+            </button>
+
+            <button
+              onClick={handleExportPaymentsExcel}
+              disabled={isExportingPDF || isExportingCSV || isExportingExcel}
+              className="h-12 w-full bg-surface-container-lowest border border-outline-variant/30 text-primary rounded-lg text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {isExportingExcel ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Download size={20} />
+              )}
+              {isExportingExcel
+                ? "Exporting Excel..."
+                : "Generate Payment History (Excel)"}
             </button>
           </div>
         </section>

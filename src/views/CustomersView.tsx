@@ -19,6 +19,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -117,23 +118,37 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
     return true;
   });
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (id.toString().startsWith('cust-') || id.toString().startsWith('customer-')) {
       alert('This customer is still pending offline synchronization. Please delete it when online, or refresh to discard offline cache.');
       return;
     }
-    if (!window.confirm('Are you sure you want to delete this customer? This will delete all their transactions and payments.')) return;
+    setCustomerToDelete(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
+    const id = customerToDelete;
     
     setErrorMsg(null);
     try {
+      // First delete associated transactions and payments to avoid foreign key violations
+      const { error: tError } = await supabase.from('transactions').delete().eq('customer_id', id);
+      if (tError) console.error('Error deleting transactions', tError);
+      
+      const { error: pError } = await supabase.from('payments').delete().eq('customer_id', id);
+      if (pError) console.error('Error deleting payments', pError);
+
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
       await fetchCustomers();
+      setCustomerToDelete(null);
     } catch (error: any) {
       console.error('Error deleting:', error);
       setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to delete customer');
       alert(`Delete Error: ${error.message || error.details || JSON.stringify(error)}`);
+      setCustomerToDelete(null);
     }
   };
 
@@ -171,7 +186,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
        phone: editingCustomer.phone,
        address: editingCustomer.address,
        credit_limit: editingCustomer.credit_limit || editingCustomer.creditLimit || 0,
-       diary_id: editingCustomer.diary_id,
+       diary_id: editingCustomer.diary_id || null,
     };
 
     const saveOffline = () => {
@@ -328,7 +343,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                      <div className="text-right flex flex-col justify-between items-end h-full shrink-0 pl-2">
                         <div className="flex items-center gap-2 mb-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                            <button onClick={(e) => openEditModal(c, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-secondary rounded-full hover:bg-secondary-container transition-colors bg-surface-container md:bg-transparent"><Edit size={16} /></button>
-                           <button onClick={(e) => handleDelete(c.id, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-error rounded-full hover:bg-error-container transition-colors bg-surface-container md:bg-transparent"><Trash2 size={16} /></button>
+                           <button onClick={(e) => handleDeleteClick(c.id, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-error rounded-full hover:bg-error-container transition-colors bg-surface-container md:bg-transparent"><Trash2 size={16} /></button>
                         </div>
                         <p className={`font-label-numeric text-[22px] md:text-2xl font-bold tracking-tight ${isOverdue ? 'text-error' : 'text-primary'}`}>
                            ₹ {(c.balance || 0).toLocaleString()}
@@ -403,6 +418,24 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                     </button>
                 </div>
                 </form>
+            </div>
+        </div>
+      )}
+      {customerToDelete && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-4 bg-scrim/40 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6">
+                <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Customer</h3>
+                <p className="text-sm text-on-surface-variant mb-6 text-balance">
+                    Are you sure you want to delete this customer? This will also permanently delete all of their transactions and payments.
+                </p>
+                <div className="flex gap-3 justify-end mt-2">
+                    <button onClick={() => setCustomerToDelete(null)} className="px-5 py-2.5 rounded-xl font-bold text-on-surface bg-surface-container hover:bg-surface-variant transition-colors" disabled={isSubmitting}>
+                        Cancel
+                    </button>
+                    <button onClick={confirmDelete} className="px-5 py-2.5 rounded-xl font-bold text-on-error bg-error hover:bg-error/90 transition-colors shadow-sm" disabled={isSubmitting}>
+                        Delete
+                    </button>
+                </div>
             </div>
         </div>
       )}

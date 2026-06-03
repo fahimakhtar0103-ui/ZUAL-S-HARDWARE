@@ -189,7 +189,7 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
                            <td className="p-5">
                               <div className="flex justify-center">
                                  <span className="bg-surface-variant text-on-surface-variant px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap inline-flex items-center gap-1">
-                                    {p.payment_mode || (p as any).paymentMode}
+                                    {p.payment_mode || (p as any).paymentMode || 'Cash'}
                                  </span>
                               </div>
                            </td>
