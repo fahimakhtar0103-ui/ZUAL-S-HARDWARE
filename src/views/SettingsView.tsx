@@ -564,7 +564,7 @@ export default function SettingsView() {
 
       doc.setFontSize(10);
       doc.setTextColor(115, 115, 115);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 28);
       doc.text(`Owner: ${ownerName}`, 14, 34);
       doc.text(`Shop: ${shopName}`, 14, 40);
 
@@ -647,7 +647,7 @@ export default function SettingsView() {
 
       doc.setFontSize(10);
       doc.setTextColor(115, 115, 115);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 28);
       doc.text(`Shop: ${shopName}`, 14, 34);
 
       doc.setDrawColor(226, 232, 240);
@@ -655,7 +655,7 @@ export default function SettingsView() {
 
       const columns = ["Date", "Customer", "Mode", "Amount (RS)", "Notes"];
       const rows = formattedData.map((p) => [
-        p.date ? new Date(p.date).toLocaleDateString() : "",
+        p.date ? new Date(p.date).toLocaleDateString('en-GB') : "",
         p.customerName,
         p.payment_mode || "Cash",
         p.amount ? p.amount.toLocaleString() : "0",
@@ -698,7 +698,7 @@ export default function SettingsView() {
       if (error) throw error;
 
       const formattedData = paymentsData.map((p: any) => ({
-        Date: p.date ? new Date(p.date).toLocaleDateString() : "",
+        Date: p.date ? new Date(p.date).toLocaleDateString('en-GB') : "",
         Customer: p.customers?.name || "Unknown",
         Mode: p.payment_mode || "Cash",
         "Amount (RS)": p.amount || 0,

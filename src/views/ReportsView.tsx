@@ -219,7 +219,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
         
         doc.setFontSize(10);
         doc.setTextColor(115, 115, 115);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+        doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 28);
         doc.text(`Time Filter: ${timeFilter}`, 14, 34);
         
         doc.setDrawColor(226, 232, 240);

@@ -281,7 +281,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary opacity-0 group-hover:opacity-100 transition-opacity" />
                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 items-start">
                        <div className="md:col-span-2 text-sm text-on-surface-variant pt-1 font-bold flex justify-between items-center">
-                          <span>{new Date(row.date).toLocaleDateString()}</span>
+                          <span>{new Date(row.date).toLocaleDateString('en-GB')}</span>
                           {!row.isPending && (
                             <div className="flex md:hidden items-center gap-1">
                                 <button
@@ -398,7 +398,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
             <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Entry</h3>
                 <p className="text-sm text-on-surface-variant mb-6 text-balance">
-                    Are you sure you want to delete this {entryToDelete.type === 'debit' ? 'purchase' : 'payment'} entry from {new Date(entryToDelete.date).toLocaleDateString()}? 
+                    Are you sure you want to delete this {entryToDelete.type === 'debit' ? 'purchase' : 'payment'} entry from {new Date(entryToDelete.date).toLocaleDateString('en-GB')}? 
                     This action cannot be undone.
                 </p>
                 <div className="flex gap-3 justify-end mt-2">

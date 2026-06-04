@@ -179,7 +179,7 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
                            </td>
                            <td className="p-5 whitespace-nowrap">
                               <div className="flex flex-col">
-                                 <span className="text-[14px] font-bold text-on-surface tracking-tight">{new Date(p.date).toLocaleDateString()}</span>
+                                 <span className="text-[14px] font-bold text-on-surface tracking-tight">{new Date(p.date).toLocaleDateString('en-GB')}</span>
                                  <span className="text-[11px] font-medium text-on-surface-variant">{new Date((p as any).created_at || p.date).toLocaleTimeString()}</span>
                               </div>
                            </td>
