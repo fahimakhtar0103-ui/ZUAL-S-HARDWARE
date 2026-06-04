@@ -426,7 +426,12 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Date</label>
-                        <input type="date" value={entryToEdit.date} onChange={e => setEntryToEdit({...entryToEdit, date: e.target.value})} className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-medium flex-1 text-on-surface" />
+                        <div className="relative">
+                            <div className="w-full h-12 px-4 flex items-center rounded-xl bg-surface-container border border-outline-variant/30 font-medium text-on-surface pointer-events-none">
+                                {entryToEdit.date ? new Date(entryToEdit.date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
+                            </div>
+                            <input type="date" value={entryToEdit.date} onChange={e => setEntryToEdit({...entryToEdit, date: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                        </div>
                     </div>
 
                     {entryToEdit.type === 'debit' ? (

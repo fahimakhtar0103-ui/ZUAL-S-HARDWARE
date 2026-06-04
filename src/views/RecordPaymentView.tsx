@@ -136,11 +136,14 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
            <div className="flex-1 border border-outline-variant/50 rounded-xl bg-surface-container-lowest p-5 relative focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Date</label>
              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-primary" size={20} />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-primary z-10 pointer-events-none" size={20} />
+                <div className="w-full h-10 pl-11 pr-4 flex items-center bg-transparent font-label-numeric font-bold text-xl text-on-surface pointer-events-none">
+                  {date ? new Date(date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
+                </div>
                 <input 
                   value={date} 
                   onChange={e => setDate(e.target.value)} 
-                  className="w-full h-10 pl-11 pr-4 bg-transparent font-label-numeric font-bold text-xl text-on-surface focus:outline-none transition-colors" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
                   type="date" 
                 />
              </div>

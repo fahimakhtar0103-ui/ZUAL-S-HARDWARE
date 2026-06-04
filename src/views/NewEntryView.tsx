@@ -179,13 +179,23 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
             </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="flex-1">
+          <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Date</label>
-             <input value={date} onChange={e => setDate(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface focus:outline-none focus:border-secondary transition-colors shadow-sm" type="date" />
+             <div className="relative">
+               <div className="w-full h-12 px-4 flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface shadow-sm pointer-events-none">
+                  {date ? new Date(date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
+               </div>
+               <input value={date} onChange={e => setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="date" />
+             </div>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Due Date</label>
-             <input value={dueDate} onChange={e => setDueDate(e.target.value)} className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface focus:outline-none focus:border-secondary transition-colors shadow-sm" type="date" />
+             <div className="relative">
+               <div className="w-full h-12 px-4 flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface shadow-sm pointer-events-none">
+                  {dueDate ? new Date(dueDate).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
+               </div>
+               <input value={dueDate} onChange={e => setDueDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="date" />
+             </div>
           </div>
           <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Customer</label>
