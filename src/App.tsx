@@ -92,7 +92,26 @@ export default function App() {
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('[App] Initial getSession:', session?.user?.id, error);
+      if (error && error.message.includes('Refresh Token Not Found')) {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        supabase.auth.signOut().catch(() => {});
+      }
       setSession(session);
+      setLoading(false);
+    }).catch((err) => {
+      console.error('[App] getSession error:', err);
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.includes('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+      supabase.auth.signOut().catch(() => {});
       setLoading(false);
     });
 
@@ -100,6 +119,15 @@ export default function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[App] Auth state changed:', event, session?.user?.id);
+      if ((event as string) === 'TOKEN_REFRESH_FAILED') {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('-auth-token')) {
+            localStorage.removeItem(key);
+          }
+        });
+        supabase.auth.signOut().catch(() => {});
+      }
       setSession(session);
       if (event === 'PASSWORD_RECOVERY') {
          setRecoveryMode(true);
