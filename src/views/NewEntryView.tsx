@@ -55,7 +55,8 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.phone && c.phone.includes(searchQuery))
+    (c.phone && c.phone.includes(searchQuery)) ||
+    (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleSave = async () => {

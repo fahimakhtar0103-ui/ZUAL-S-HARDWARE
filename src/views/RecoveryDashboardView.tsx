@@ -124,7 +124,9 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
   // Filter accounts based on selected diary and search query
   const filteredCustomers = overdueCustomers.filter(c => {
     const matchesDiary = selectedDiary === 'ALL' || c.diary_id === selectedDiary;
-    const matchesSearch = c.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = c.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          c.phone?.includes(searchQuery) ||
+                          (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()));
     const hasOutstanding = (c.outstanding_balance || 0) > 0;
     return matchesDiary && matchesSearch && hasOutstanding;
   });

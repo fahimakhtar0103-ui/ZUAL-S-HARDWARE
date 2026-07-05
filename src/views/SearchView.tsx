@@ -19,10 +19,11 @@ export default function SearchView({ navigateTo }: { navigateTo: any }) {
       setLoading(true);
       setErrorMsg(null);
       try {
+        const safeQuery = searchQuery.replace(/[(),]/g, '');
         const { data: cData } = await supabase
           .from('customers')
           .select('id, name, phone, address')
-          .ilike('name', `%${searchQuery}%`)
+          .or(`name.ilike.%${safeQuery}%,phone.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%`)
           .limit(5);
 
         const { data: dData } = await supabase

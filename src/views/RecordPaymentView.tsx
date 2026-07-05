@@ -42,7 +42,8 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
 
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (c.phone && c.phone.includes(searchQuery))
+    (c.phone && c.phone.includes(searchQuery)) ||
+    (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const remainingDue = selectedCustomer ? (selectedCustomer.balance || 0) - (Number(amount) || 0) : 0;

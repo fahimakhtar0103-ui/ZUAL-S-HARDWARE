@@ -106,7 +106,8 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
 
   const filteredCustomers = customers.filter(c => {
     const matchesQuery = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (c.phone && c.phone.includes(searchQuery));
+      (c.phone && c.phone.includes(searchQuery)) ||
+      (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()));
     if (!matchesQuery) return false;
     
     if (filterType === 'OUTSTANDING') {
