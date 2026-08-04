@@ -304,6 +304,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
                             >
                                <option value="UPI">UPI ▼</option>
                                <option value="PhonePe">PhonePe ▼</option>
+                               <option value="GPay">GPay ▼</option>
                                <option value="Bank Transfer">Bank Transfer ▼</option>
                                <option value="Cheque">Cheque ▼</option>
                             </select>
@@ -324,7 +325,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
               <div>
                  <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Payment Mode</label>
                  <div className="flex flex-wrap gap-2">
-                    {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                    {['Cash', 'PhonePe', 'GPay', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
                         <button
                           key={mode}
                           type="button"

@@ -332,7 +332,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
               <div className="w-full md:w-2/4">
                 <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest text-right">Payment Mode</label>
                 <div className="flex flex-wrap gap-2 justify-end">
-                   {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                   {['Cash', 'PhonePe', 'GPay', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
                        <button
                          key={mode}
                          type="button"
