@@ -13,6 +13,10 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState<number | ''>('');
   const [paymentMode, setPaymentMode] = useState<string>('Cash');
+  const [isSplitPayment, setIsSplitPayment] = useState(false);
+  const [cashAmount, setCashAmount] = useState<number | ''>('');
+  const [onlineAmount, setOnlineAmount] = useState<number | ''>('');
+  const [onlineMode, setOnlineMode] = useState<string>('UPI');
   const [referenceNotes, setReferenceNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -46,14 +50,18 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
     (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const remainingDue = selectedCustomer ? (selectedCustomer.balance || 0) - (Number(amount) || 0) : 0;
+  const totalAmount = isSplitPayment 
+    ? (Number(cashAmount) || 0) + (Number(onlineAmount) || 0) 
+    : (Number(amount) || 0);
+
+  const remainingDue = selectedCustomer ? (selectedCustomer.balance || 0) - totalAmount : 0;
 
   const handleSave = async () => {
     if (!selectedCustomer) {
         setErrorMsg('Please select a customer');
         return;
     }
-    if (!amount || amount <= 0) {
+    if (totalAmount <= 0) {
         setErrorMsg('Please enter a valid amount');
         return;
     }
@@ -72,14 +80,37 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
             const userRes = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
             const userId = userRes?.data?.user?.id;
 
-            offlineSync.addPendingOp('payment', 'insert', {
-                customer_id: selectedCustomer.id,
-                recorded_by: userId,
-                amount: Number(amount),
-                payment_mode: paymentMode,
-                reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
-                date
-            }, selectedCustomer.name);
+            if (isSplitPayment) {
+                if (Number(cashAmount) > 0) {
+                    offlineSync.addPendingOp('payment', 'insert', {
+                        customer_id: selectedCustomer.id,
+                        recorded_by: userId,
+                        amount: Number(cashAmount),
+                        payment_mode: 'Cash',
+                        reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
+                        date
+                    }, selectedCustomer.name);
+                }
+                if (Number(onlineAmount) > 0) {
+                    offlineSync.addPendingOp('payment', 'insert', {
+                        customer_id: selectedCustomer.id,
+                        recorded_by: userId,
+                        amount: Number(onlineAmount),
+                        payment_mode: onlineMode,
+                        reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
+                        date
+                    }, selectedCustomer.name);
+                }
+            } else {
+                offlineSync.addPendingOp('payment', 'insert', {
+                    customer_id: selectedCustomer.id,
+                    recorded_by: userId,
+                    amount: Number(amount),
+                    payment_mode: paymentMode,
+                    reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
+                    date
+                }, selectedCustomer.name);
+            }
 
             alert('You are offline or connection is weak. This payment transaction was saved locally and will auto-sync when online connection is restored.');
             navigateTo('customer-ledger', { customerId: selectedCustomer.id });
@@ -100,14 +131,40 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
         const userRes = await supabase.auth.getUser();
         const userId = userRes.data.user?.id;
         
-        const { error } = await supabase.from('payments').insert([{
-            customer_id: selectedCustomer.id,
-            recorded_by: userId,
-            amount: Number(amount),
-            payment_mode: paymentMode,
-            reference_notes: referenceNotes,
-            date
-        }]);
+        const inserts = [];
+        if (isSplitPayment) {
+            if (Number(cashAmount) > 0) {
+                inserts.push({
+                    customer_id: selectedCustomer.id,
+                    recorded_by: userId,
+                    amount: Number(cashAmount),
+                    payment_mode: 'Cash',
+                    reference_notes: referenceNotes,
+                    date
+                });
+            }
+            if (Number(onlineAmount) > 0) {
+                inserts.push({
+                    customer_id: selectedCustomer.id,
+                    recorded_by: userId,
+                    amount: Number(onlineAmount),
+                    payment_mode: onlineMode,
+                    reference_notes: referenceNotes,
+                    date
+                });
+            }
+        } else {
+            inserts.push({
+                customer_id: selectedCustomer.id,
+                recorded_by: userId,
+                amount: Number(amount),
+                payment_mode: paymentMode,
+                reference_notes: referenceNotes,
+                date
+            });
+        }
+
+        const { error } = await supabase.from('payments').insert(inserts);
 
         if (error) throw error;
 
@@ -207,36 +264,83 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
          
          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
            <div className="col-span-1 md:col-span-2">
-              <label className="block text-[11px] font-bold text-primary mb-2 uppercase tracking-widest">Amount Received (₹)</label>
-              <input 
-                value={amount}
-                onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full h-16 md:h-20 px-4 bg-surface-container/30 border-2 border-outline-variant/20 rounded-xl font-label-numeric font-bold text-4xl md:text-5xl text-on-surface focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors" 
-                type="number" 
-                placeholder="0" 
-                autoFocus 
-              />
+              <div className="flex items-center justify-between mb-2">
+                 <label className="block text-[11px] font-bold text-primary uppercase tracking-widest">Amount Received (₹)</label>
+                 <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-on-surface-variant">
+                     <input type="checkbox" checked={isSplitPayment} onChange={e => setIsSplitPayment(e.target.checked)} className="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary focus:ring-offset-surface-container-lowest" />
+                     Split Payment
+                 </label>
+              </div>
+              
+              {!isSplitPayment ? (
+                 <input 
+                   value={amount}
+                   onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                   className="w-full h-16 md:h-20 px-4 bg-surface-container/30 border-2 border-outline-variant/20 rounded-xl font-label-numeric font-bold text-4xl md:text-5xl text-on-surface focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors" 
+                   type="number" 
+                   placeholder="0" 
+                   autoFocus 
+                 />
+              ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Cash Amount (₹)</label>
+                        <input 
+                          value={cashAmount}
+                          onChange={e => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="w-full h-16 md:h-20 px-4 bg-surface-container/30 border-2 border-outline-variant/20 rounded-xl font-label-numeric font-bold text-3xl md:text-4xl text-on-surface focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors" 
+                          type="number" 
+                          placeholder="0" 
+                          autoFocus 
+                        />
+                    </div>
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Online Amount (₹)</label>
+                            <select 
+                               value={onlineMode} 
+                               onChange={e => setOnlineMode(e.target.value)}
+                               className="text-xs font-bold bg-transparent text-primary border-none focus:ring-0 cursor-pointer p-0 appearance-none"
+                            >
+                               <option value="UPI">UPI ▼</option>
+                               <option value="PhonePe">PhonePe ▼</option>
+                               <option value="Bank Transfer">Bank Transfer ▼</option>
+                               <option value="Cheque">Cheque ▼</option>
+                            </select>
+                        </div>
+                        <input 
+                          value={onlineAmount}
+                          onChange={e => setOnlineAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="w-full h-16 md:h-20 px-4 bg-surface-container/30 border-2 border-outline-variant/20 rounded-xl font-label-numeric font-bold text-3xl md:text-4xl text-on-surface focus:outline-none focus:border-primary focus:bg-surface-container-lowest transition-colors" 
+                          type="number" 
+                          placeholder="0" 
+                        />
+                    </div>
+                 </div>
+              )}
            </div>
 
-           <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Payment Mode</label>
-              <div className="flex flex-wrap gap-2">
-                 {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
-                     <button
-                       key={mode}
-                       type="button"
-                       onClick={() => setPaymentMode(mode)}
-                       className={`px-4 h-12 rounded-xl text-[14px] font-bold transition-all border ${
-                         paymentMode === mode 
-                           ? 'bg-primary text-on-primary border-primary shadow-sm' 
-                           : 'bg-surface-container/50 border-outline-variant/50 text-on-surface hover:bg-surface-container-high'
-                       }`}
-                     >
-                       {mode}
-                     </button>
-                 ))}
+           {!isSplitPayment && (
+              <div>
+                 <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Payment Mode</label>
+                 <div className="flex flex-wrap gap-2">
+                    {['Cash', 'PhonePe', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setPaymentMode(mode)}
+                          className={`px-4 h-12 rounded-xl text-[14px] font-bold transition-all border ${
+                            paymentMode === mode 
+                              ? 'bg-primary text-on-primary border-primary shadow-sm' 
+                              : 'bg-surface-container/50 border-outline-variant/50 text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          {mode}
+                        </button>
+                    ))}
+                 </div>
               </div>
-           </div>
+           )}
 
            <div>
               <label className="block text-[10px] font-bold text-on-surface-variant mb-2 uppercase tracking-widest">Reference / Remarks</label>
@@ -266,7 +370,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
             
             <button 
               onClick={handleSave} 
-              disabled={isSubmitting || !selectedCustomer || !amount}
+              disabled={isSubmitting || !selectedCustomer || (!isSplitPayment && !amount) || (isSplitPayment && !cashAmount && !onlineAmount)}
               className="w-full sm:w-auto h-14 px-8 md:px-10 bg-primary text-on-primary text-[17px] font-bold rounded-xl shadow-md hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={20} fill="currentColor" /> {isSubmitting ? 'Saving...' : 'Save Payment'}

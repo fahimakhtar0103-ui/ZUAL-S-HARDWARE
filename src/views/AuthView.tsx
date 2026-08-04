@@ -37,7 +37,7 @@ export default function AuthView() {
           password,
         });
         if (error) {
-           console.error('[AuthView] Login Error:', error);
+           console.error('[AuthView] Login Error:', error.message || error);
            throw error;
         }
         console.log('[AuthView] Login successful:', data);
@@ -55,7 +55,7 @@ export default function AuthView() {
           }
         });
         if (error) {
-           console.error('[AuthView] Signup Error:', error);
+           console.error('[AuthView] Signup Error:', error.message || error);
            throw error;
         }
         console.log('[AuthView] Signup successful:', data);
@@ -63,7 +63,7 @@ export default function AuthView() {
         setIsLogin(true);
       }
     } catch (err: any) {
-      console.error('[AuthView] Auth Error Exception:', err);
+      console.error('[AuthView] Auth Error Exception:', err?.message || err);
       
       let errorMsg = err?.message || err?.error_description || err?.msg || '';
       
