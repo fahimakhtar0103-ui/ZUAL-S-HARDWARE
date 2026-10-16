@@ -1,0 +1,52 @@
+name: Android responsive UI smoke test
+on:
+  push:
+    branches: [android/zual-install-reliability-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-scroll-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      # These are the existing PUBLIC/ANON FRONTEND credentials embedded in the app.
+      # Never use the Supabase service_role or secret key in an Android bundle.
+      VITE_SUPABASE_URL: "https://exajrwxoijmgljcvigyj.supabase.co"
+      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWpyd3hvaWptZ2xqY3ZpZ3lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg1OTksImV4cCI6MjA5NTkwNDU5OX0.l13EJNVBGvJrlFsS69hLX_wOAajxfBlF8mJ9ks1ATw0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install project
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Install browser test runner
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install chromium
+      - name: Start local bundled UI
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 > /tmp/zual-vite.log 2>&1 &
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/zual-vite.log
+          exit 1
+      - name: Test dashboard scroll and date picker at mobile widths
+        run: node scripts/test-mobile-layout.mjs
+      - name: Save test screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Mobile-Responsive-Preview
+          path: android-ui-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14
