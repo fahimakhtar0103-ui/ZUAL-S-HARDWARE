@@ -58,7 +58,9 @@ class OfflineSyncEngine {
   getPendingOps(): PendingOp[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       console.error('[OfflineSync] Error reading from localStorage:', e);
       return [];
@@ -69,6 +71,12 @@ class OfflineSyncEngine {
     // A failed storage write must NEVER be reported as a successful offline save.
     // The caller must remain on the form and show a visible error.
     try {
+      const existing = localStorage.getItem(STORAGE_KEY);
+      if (existing) {
+        // Never overwrite a damaged queue: that would permanently lose customer entries.
+        const parsed = JSON.parse(existing);
+        if (!Array.isArray(parsed)) throw new Error('Offline queue is not a valid list');
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
     } catch (error) {
       console.error('[OfflineSync] Failed to persist offline records:', error);
