@@ -8,6 +8,7 @@ import { cacheCustomers, readCachedCustomers } from '../lib/customerCache';
 export default function CustomersView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
   const { isOnline, pendingCount } = useOnlineStatus();
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(60);
   
   const diaryId = context?.diaryId;
   
@@ -62,7 +63,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
 
       setCustomers([...pendingCustomers, ...mapped]);
       // Cache the last successful customer directory for temporary mobile outages.
-      cacheCustomers(mapped);
+      if (!diaryId) cacheCustomers(mapped);
 
     } catch (error: any) {
       console.error('Error fetching customers:', error);
@@ -121,6 +122,8 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
     return true;
   });
 
+  useEffect(() => { setVisibleCount(60); }, [searchQuery, filterType, diaryId]);
+
   const handleDeleteClick = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (id.toString().startsWith('cust-') || id.toString().startsWith('customer-')) {
@@ -136,12 +139,17 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
     
     setErrorMsg(null);
     try {
-      // First delete associated transactions and payments to avoid foreign key violations
-      const { error: tError } = await supabase.from('transactions').delete().eq('customer_id', id);
-      if (tError) console.error('Error deleting transactions', tError);
-      
-      const { error: pError } = await supabase.from('payments').delete().eq('customer_id', id);
-      if (pError) console.error('Error deleting payments', pError);
+      // Never cascade-delete the customer's ledger or payment history.
+      // A customer with financial records must be retained for audit integrity.
+      const [salesCheck, paymentsCheck] = await Promise.all([
+        supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('customer_id', id),
+        supabase.from('payments').select('id', { count: 'exact', head: true }).eq('customer_id', id)
+      ]);
+      if (salesCheck.error) throw salesCheck.error;
+      if (paymentsCheck.error) throw paymentsCheck.error;
+      if ((salesCheck.count || 0) > 0 || (paymentsCheck.count || 0) > 0) {
+        throw new Error('This customer has sales or payments. Deletion is blocked to protect financial records.');
+      }
 
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
@@ -322,7 +330,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
             </div>
         ) : (
             <div className="flex flex-col gap-3 pb-8">
-               {filteredCustomers.map((c) => {
+               {filteredCustomers.slice(0, visibleCount).map((c) => {
                  const isOverdue = c.status === 'OVER_LIMIT';
                  const isHealthy = !isOverdue && (c.balance || 0) < 50000;
                  return (
@@ -360,6 +368,12 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                    </div>
                  </div>
                )})}
+               {filteredCustomers.length > visibleCount && (
+                 <button type="button" onClick={() => setVisibleCount(count => count + 60)}
+                   className="min-h-12 rounded-xl bg-surface-container text-primary font-bold text-sm w-full border border-outline-variant/30">
+                   Show more customers ({Math.min(visibleCount, filteredCustomers.length)} of {filteredCustomers.length})
+                 </button>
+               )}
             </div>
         )}
       </div>
