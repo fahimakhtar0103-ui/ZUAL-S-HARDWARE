@@ -1,7 +1,7 @@
 name: Build Zual Hardware Android APK
 on:
   push:
-    branches: [android/zual-install-reliability-v2]
+    branches: [android/v2-qa-search-reports-recovery]
   workflow_dispatch:
 
 permissions:
@@ -70,8 +70,8 @@ jobs:
           echo "Capacitor Android project contains locally bundled assets."
       - name: Set version and compatibility metadata
         run: |
-          sed -i 's/versionCode 1/versionCode 2/' android/app/build.gradle
-          sed -i 's/versionName "1.0"/versionName "2.0"/' android/app/build.gradle
+          sed -i 's/versionCode 1/versionCode 3/' android/app/build.gradle
+          sed -i 's/versionName "1.0"/versionName "2.1"/' android/app/build.gradle
           grep -n 'applicationId\|versionCode\|versionName\|minSdk' android/app/build.gradle
       - name: Compile installable Android APK
         run: |
