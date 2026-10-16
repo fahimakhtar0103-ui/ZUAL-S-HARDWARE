@@ -467,3 +467,18 @@ body { background: var(--zl-paper); -webkit-font-smoothing: antialiased; }
   .zl-legacy-page [class*="max-w-"] { max-width:100%; }
   .zl-legacy-page [class*="shadow-"] { box-shadow:0 3px 12px rgba(40,60,85,.035); }
 }
+
+
+/* Sign-in completes the same premium experience. */
+.zl-auth-cover { background: radial-gradient(circle at 10% 0%,rgba(46,108,225,.11),transparent 36%),radial-gradient(circle at 90% 96%,rgba(24,68,153,.08),transparent 45%),#f5f8fd; }
+.zl-auth-card { border-radius:25px; border:1px solid #e2eaf5; box-shadow:0 24px 75px rgba(25,45,90,.12),0 4px 20px rgba(30,52,89,.03); }
+.zl-auth-hero { padding:37px 28px; background:radial-gradient(circle at 85% 10%,rgba(117,170,255,.22),transparent 41%),linear-gradient(125deg,#101e38,#23477e); }
+.zl-auth-hero svg { color:#a9cbff; }
+.zl-auth-card input { border-radius:12px; min-height:49px; background:#f5f8fc; }
+.zl-auth-card button[type="submit"] { border-radius:12px; min-height:49px; background:#2563eb; }
+.zl-auth-card button[type="submit"]:hover { background:#1b55cf; }
+.zl-auth-card :is(input,button):focus-visible { outline:2px solid #82b1ff; outline-offset:2px; }
+@media(max-width:767px) {
+ .zl-auth-hero { padding:30px 20px; }
+ .zl-auth-card .p-8 { padding:24px; }
+}
