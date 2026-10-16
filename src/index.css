@@ -576,3 +576,17 @@ body { margin: 0; position: relative; overscroll-behavior: none; }
  .zl-date-chip { padding: 7px; font-size: 9px; }
  .zl-intro-actions > .zl-button { padding: 0 10px; }
 }
+
+
+/* VERIFIED ROOT CAUSE (320px Chromium): the generic .zl-sidebar {display:flex}
+   declaration overrode Tailwind's .hidden on Android, consuming the entire
+   100dvh before the app's main area. Mobile scroller measured clientHeight=0.
+   Always hide desktop sidebar below the 1024px navigation breakpoint. */
+@media (max-width: 1023px) {
+  .zl-sidebar { display: none !important; }
+  .zl-workspace-main { flex: 1 1 0%; min-height: 0 !important; }
+  .zl-workspace-scroll { flex: 1 1 0%; min-height: 0 !important; }
+}
+@media (min-width: 1024px) {
+  .zl-sidebar { display: flex !important; }
+}
