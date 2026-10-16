@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal, MapPin, Edit, Trash2, Plus, X, Phone, Loader
 import { supabase } from '../lib/supabase';
 import { AppContext } from '../types';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
+import { cacheCustomers, readCachedCustomers } from '../lib/customerCache';
 
 export default function CustomersView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
   const { isOnline, pendingCount } = useOnlineStatus();
@@ -11,7 +12,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   const diaryId = context?.diaryId;
   
   // Data state
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>(() => readCachedCustomers());
   const [isLoading, setIsLoading] = useState(true);
   const [diaries, setDiaries] = useState<any[]>([]);
   const [filterType, setFilterType] = useState<'ALL' | 'OUTSTANDING' | 'OVER_LIMIT'>('ALL');
@@ -39,8 +40,9 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
       const { data: balData, error: balErr } = await supabase.from('view_customer_balances').select('customer_id, outstanding_balance, status');
       if (balErr) throw balErr;
       
-      const mapped = custData.map((c: any) => {
-          const bal = balData.find((b: any) => b.customer_id === c.id);
+      const balanceByCustomer = new Map((balData || []).map((b: any) => [b.customer_id, b]));
+      const mapped = (custData || []).map((c: any) => {
+          const bal: any = balanceByCustomer.get(c.id);
           return {
               ...c,
               balance: Number(bal?.outstanding_balance) || 0,
@@ -59,6 +61,8 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
       }));
 
       setCustomers([...pendingCustomers, ...mapped]);
+      // Cache the last successful customer directory for temporary mobile outages.
+      cacheCustomers(mapped);
 
     } catch (error: any) {
       console.error('Error fetching customers:', error);
@@ -72,11 +76,9 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
           status: 'CLEARED',
           isPending: true
       }));
-      if (pendingCustomers.length > 0) {
-        setCustomers(pendingCustomers);
-      } else {
-        setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to fetch customers');
-      }
+      const cached = readCachedCustomers().filter(c => !diaryId || c.diary_id === diaryId);
+      setCustomers([...pendingCustomers, ...cached]);
+      setErrorMsg(cached.length ? 'Showing saved customer directory. Balances may be outdated until online.' : (error.message || 'Unable to load customers. Check your connection.'));
     } finally {
       setIsLoading(false);
     }
@@ -104,10 +106,10 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
     setSearchQuery(e.target.value);
   };
 
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredCustomers = customers.filter(c => {
-    const matchesQuery = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (c.phone && c.phone.includes(searchQuery)) ||
-      (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesQuery = !normalizedQuery || [c.name, c.phone, c.address]
+      .some(value => String(value ?? '').toLocaleLowerCase().includes(normalizedQuery));
     if (!matchesQuery) return false;
     
     if (filterType === 'OUTSTANDING') {
@@ -197,10 +199,15 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
             return;
         }
 
-        offlineSync.addPendingOp('customer', 'insert', payload, payload.name);
-        alert(`You are offline. Customer "${payload.name}" was successfully created locally and will automatically synchronize when connection recovers.`);
-        setIsModalOpen(false);
-        setIsSubmitting(false);
+        try {
+          offlineSync.addPendingOp('customer', 'insert', payload, payload.name);
+          alert(`You are offline. Customer "${payload.name}" was saved locally and will synchronize on reconnect.`);
+          setIsModalOpen(false);
+        } catch (storageError: any) {
+          setErrorMsg(storageError?.message || 'Unable to save customer offline; no record was saved.');
+        } finally {
+          setIsSubmitting(false);
+        }
     };
 
     if (!navigator.onLine) {
@@ -239,7 +246,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   const getOverdueCount = () => customers.filter(c => c.status === 'OVER_LIMIT').length;
 
   return (
-    <div className="zl-legacy-page px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 h-full relative">
+    <div className="zl-legacy-page zl-customers-page w-full px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-4 md:gap-6 pt-4 pb-28 relative min-w-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-4xl md:text-[48px] font-bold text-primary tracking-tight">Customers</h2>
@@ -250,8 +257,8 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
         </button>
       </div>
 
-      <div className="flex gap-3 shrink-0 overflow-x-auto hide-scrollbar pb-2 md:pb-0 font-medium">
-        <div className="flex-1 min-w-[280px] relative">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full min-w-0 font-medium">
+        <div className="flex-1 w-full min-w-0 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size={20} />
           <input 
             type="text" 
@@ -269,7 +276,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
               return 'ALL';
             });
           }}
-          className={`h-12 px-6 rounded-full flex items-center gap-2 text-sm border transition-colors whitespace-nowrap ${
+          className={`h-12 w-full sm:w-auto px-4 sm:px-6 rounded-xl flex items-center justify-center gap-2 text-sm border transition-colors whitespace-nowrap ${
             filterType !== 'ALL' 
               ? 'bg-secondary-container text-on-secondary-container border-secondary/30 font-bold' 
               : 'bg-surface-container text-on-surface hover:bg-surface-container-high border-outline-variant/20 font-medium'
@@ -282,7 +289,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="min-w-0 w-full -mx-0 md:mx-0">
         {errorMsg && !isModalOpen && (
             <div className="mb-4 p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20">
               <p className="font-bold mb-1">Error:</p>
@@ -320,33 +327,33 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                  const isHealthy = !isOverdue && (c.balance || 0) < 50000;
                  return (
                  <div key={c.id} onClick={() => navigateTo('customer-ledger', { customerId: c.id })} className="rounded-xl bg-surface-container-lowest shadow-sm cursor-pointer border border-outline-variant/30 hover:shadow-md transition-shadow relative group">
-                   <div className="p-4 md:p-6 flex items-center justify-between">
-                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0 ${isOverdue ? 'bg-error-container text-on-error-container' : isHealthy ? 'bg-surface-variant text-on-surface-variant' : 'bg-secondary-container text-on-secondary-container'}`}>
+                   <div className="p-3.5 sm:p-4 md:p-6 flex items-start sm:items-center justify-between gap-2.5 min-w-0">
+                     <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
+                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0 ${isOverdue ? 'bg-error-container text-on-error-container' : isHealthy ? 'bg-surface-variant text-on-surface-variant' : 'bg-secondary-container text-on-secondary-container'}`}>
                           {c.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-[18px] font-bold text-primary tracking-tight">{c.name}</h3>
+                            <h3 className="text-[15px] sm:text-[18px] font-bold text-primary tracking-tight break-words">{c.name}</h3>
                             {c.isPending && (
                               <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse whitespace-nowrap">
                                 <WifiOff size={10} /> Pending Sync
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-on-surface-variant flex items-center gap-2 mt-1 font-medium">
+                          <p className="text-xs sm:text-sm text-on-surface-variant flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 font-medium break-all">
                             <span className="flex items-center gap-1"><Phone size={12} className="text-outline" /> {c.phone || 'N/A'}</span>
                             <span className="text-outline-variant">•</span>
                             <span className="flex items-center gap-1"><MapPin size={12} className="text-outline" /> {c.address || 'N/A'}</span>
                           </p>
                         </div>
                      </div>
-                     <div className="text-right flex flex-col justify-between items-end h-full shrink-0 pl-2">
+                     <div className="text-right flex flex-col justify-between items-end h-full shrink-0 pl-1">
                         <div className="flex items-center gap-2 mb-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                            <button onClick={(e) => openEditModal(c, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-secondary rounded-full hover:bg-secondary-container transition-colors bg-surface-container md:bg-transparent"><Edit size={16} /></button>
                            <button onClick={(e) => handleDeleteClick(c.id, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-error rounded-full hover:bg-error-container transition-colors bg-surface-container md:bg-transparent"><Trash2 size={16} /></button>
                         </div>
-                        <p className={`font-label-numeric text-[22px] md:text-2xl font-bold tracking-tight ${isOverdue ? 'text-error' : 'text-primary'}`}>
+                        <p className={`font-label-numeric text-[16px] sm:text-[22px] md:text-2xl font-bold tracking-tight ${isOverdue ? 'text-error' : 'text-primary'}`}>
                            ₹ {(c.balance || 0).toLocaleString()}
                         </p>
                      </div>
