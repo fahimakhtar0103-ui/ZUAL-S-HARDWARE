@@ -244,7 +244,7 @@ export default function App() {
          <div className="zl-workspace-scroll flex-1 relative overflow-y-auto md:hide-scrollbar">
             {currentView === 'dashboard' && <DashboardView navigateTo={navigateTo} />}
             {currentView === 'diaries' && <DiariesView navigateTo={navigateTo} />}
-            {currentView === 'customers' && <CustomersView navigateTo={navigateTo} />}
+            {currentView === 'customers' && <CustomersView navigateTo={navigateTo} context={context} />}
             {currentView === 'reports' && <ReportsView navigateTo={navigateTo} />}
              {currentView === 'recovery-dashboard' && <RecoveryDashboardView navigateTo={navigateTo} />}
             {currentView === 'settings' && <SettingsView />}
