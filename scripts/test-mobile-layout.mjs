@@ -44,7 +44,10 @@ async function mockBackend(route) {
   }
   let body = [];
   if (path.includes('/view_customer_balances')) {
-    body = [{outstanding_balance:25215000,customer_id:'22222222-2222-4222-8222-222222222222',status:'DUE'}];
+    body = [{
+      outstanding_balance:25215000, customer_id:'22222222-2222-4222-8222-222222222222',
+      customer_name:'Demo Customer', credit_limit:120000, status:'OVER_LIMIT'
+    }];
   } else if (path.endsWith('/customers')) {
     body = [{
       id:'22222222-2222-4222-8222-222222222222',
@@ -123,8 +126,69 @@ try {
     const formScrollable=await page.locator('.zl-workspace-scroll').evaluate(node=>node.scrollHeight>node.clientHeight);
     assert.ok(formScrollable,JSON.stringify({size,reason:'sale form cannot scroll'}));
     await page.screenshot({path:'android-ui-screenshots/new-sale-'+size.width+'.png',fullPage:false});
+
+    // All requests remain intercepted. Never create customers or transactions in Supabase.
+    await page.goBack();
+    await page.waitForSelector('.zl-dashboard .zl-hero',{timeout:10000});
+    const mobileNav = page.getByRole('navigation',{name:'Mobile navigation'});
+    await mobileNav.getByRole('button',{name:'Customers'}).click();
+    await page.getByPlaceholder('Search Name or Phone...').waitFor({state:'visible',timeout:10000});
+    await page.getByText('Demo Customer',{exact:true}).first().waitFor({state:'visible',timeout:10000});
+    const customersSearch = page.getByPlaceholder('Search Name or Phone...');
+    const searchWidth = (await customersSearch.boundingBox())?.width || 0;
+    assert.ok(searchWidth > Math.min(size.width * .62,230),JSON.stringify({size,searchWidth,reason:'customer search field clipped'}));
+    await customersSearch.fill('demo');
+    await page.getByText('Demo Customer',{exact:true}).first().waitFor();
+    await customersSearch.fill('999999');
+    await page.getByText('Demo Customer',{exact:true}).first().waitFor();
+    await customersSearch.fill('zz-no-customer');
+    await page.getByText('No customers found',{exact:true}).waitFor();
+    await customersSearch.fill('');
+    await page.getByText('Demo Customer',{exact:true}).first().waitFor();
+    await page.screenshot({path:'android-ui-screenshots/customers-'+size.width+'.png',fullPage:false});
+    const customerOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+    assert.ok(customerOverflow<=4,JSON.stringify({size,customerOverflow,reason:'customers page horizontal overflow'}));
+
+    await mobileNav.getByRole('button',{name:'Recovery'}).click();
+    await page.getByRole('heading',{name:'Recovery Dashboard'}).waitFor({state:'visible',timeout:10000});
+    const recoveryList = size.width < 768
+      ? page.locator('[data-testid="mobile-recovery-accounts"]')
+      : page.locator('table').first();
+    await recoveryList.waitFor({state:'visible'});
+    await page.getByPlaceholder('Search debtor name...').fill('demo');
+    await recoveryList.getByText('Demo Customer',{exact:true}).first().waitFor();
+    await page.getByPlaceholder('Search debtor name...').fill('zz-no-customer');
+    await recoveryList.getByText(
+      size.width < 768
+        ? 'No matching debtor accounts.'
+        : 'No matching debtor accounts with outstanding balances found.'
+    ).waitFor();
+    await page.getByPlaceholder('Search debtor name...').fill('');
+    const recoveryScroll=await page.locator('.zl-workspace-scroll').evaluate(node=>({
+      height:node.clientHeight,scrollHeight:node.scrollHeight
+    }));
+    assert.ok(recoveryScroll.scrollHeight>recoveryScroll.height+30,JSON.stringify({size,recoveryScroll,reason:'recovery cannot scroll'}));
+    await page.locator('.zl-workspace-scroll').evaluate(node=>node.scrollTo(0,node.scrollHeight));
+    await page.screenshot({path:'android-ui-screenshots/recovery-'+size.width+'.png',fullPage:false});
+    await page.locator('.zl-workspace-scroll').evaluate(node=>node.scrollTo(0,0));
+
+    await mobileNav.getByRole('button',{name:'More navigation options'}).click();
+    await page.getByRole('dialog',{name:'More navigation'}).getByRole('button',{name:'Reports'}).click();
+    await page.getByRole('heading',{name:'Enterprise Reports'}).waitFor({state:'visible',timeout:10000});
+    await page.getByRole('button',{name:'This Week'}).click();
+    await page.getByRole('button',{name:'All Time'}).click();
+    const reportScroll=await page.locator('.zl-workspace-scroll').evaluate(node=>({
+      height:node.clientHeight,scrollHeight:node.scrollHeight
+    }));
+    assert.ok(reportScroll.scrollHeight>reportScroll.height+30,JSON.stringify({size,reportScroll,reason:'reports cannot scroll'}));
+    await page.locator('.zl-workspace-scroll').evaluate(node=>node.scrollTo(0,node.scrollHeight));
+    await page.getByRole('heading',{name:'Available Reports'}).waitFor({state:'attached'});
+    await page.screenshot({path:'android-ui-screenshots/reports-'+size.width+'.png',fullPage:false});
+
+    const lastOverflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+    assert.ok(lastOverflow<=4,JSON.stringify({size,lastOverflow,reason:'reports page horizontal overflow'}));
     assert.equal(pageErrors.length,0,JSON.stringify({size,pageErrors}));
-    console.log('PASS mobile layout',size.width,'dashboard overflow',state.actualOverflow,'scrolled',top,'date',dateRect?.width);
+    console.log('PASS full Android QA',size.width,'customer search, recovery cards, reports filters, scrolling, date picker');
     await context.close();
   }
 } finally {

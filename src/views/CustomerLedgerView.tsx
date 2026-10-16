@@ -223,12 +223,12 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
         {customer && (
         <div className="bg-surface-container rounded-xl p-6 shadow-sm border border-surface-variant">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-2xl font-bold">
+            <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-2xl font-bold">
                  {customer.name?.charAt(0).toUpperCase()}
               </div>
-              <div>
-                 <h2 className="text-[20px] font-bold text-on-surface tracking-tight">{customer.name}</h2>
+              <div className="min-w-0 flex-1">
+                 <h2 className="break-words text-[18px] sm:text-[20px] font-bold text-on-surface tracking-tight">{customer.name}</h2>
                  <p className="text-on-surface-variant text-sm mt-1 flex items-center gap-1.5 font-medium">
                    <MapPin size={16} /> {customer.address || 'N/A'}
                  </p>

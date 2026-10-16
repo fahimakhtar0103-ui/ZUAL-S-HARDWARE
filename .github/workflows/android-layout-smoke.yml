@@ -1,7 +1,7 @@
 name: Android responsive UI smoke test
 on:
   push:
-    branches: [android/zual-install-reliability-v2]
+    branches: [android/zual-install-reliability-v2, android/v2-qa-search-reports-recovery]
   workflow_dispatch:
 permissions:
   contents: read
