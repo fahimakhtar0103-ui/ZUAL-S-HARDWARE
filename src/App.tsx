@@ -187,10 +187,10 @@ export default function App() {
   const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history'].includes(currentView);
 
   return (
-    <div className="zl-app-shell text-on-background font-body-md antialiased min-h-[100dvh] flex flex-col md:flex-row overflow-x-hidden">
+    <div className="zl-app-shell text-on-background font-body-md antialiased flex flex-col lg:flex-row">
       <Sidebar currentView={currentView} navigateTo={navigateTo} />
       
-      <main className="zl-workspace-main flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-[100dvh] min-w-0 w-full max-w-full overflow-x-hidden">
+      <main className="zl-workspace-main flex-1 flex flex-col relative min-w-0 w-full max-w-full">
          {showTopBar && (
            <TopBar 
              currentView={currentView} 
@@ -221,7 +221,7 @@ export default function App() {
            </div>
          )}
          
-         <div className="zl-workspace-scroll flex-1 overflow-y-auto md:hide-scrollbar relative touch-pan-y scroll-smooth">
+         <div className="zl-workspace-scroll flex-1 relative overflow-y-auto md:hide-scrollbar">
             {currentView === 'dashboard' && <DashboardView navigateTo={navigateTo} />}
             {currentView === 'diaries' && <DiariesView navigateTo={navigateTo} />}
             {currentView === 'customers' && <CustomersView navigateTo={navigateTo} />}
