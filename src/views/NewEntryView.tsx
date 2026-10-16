@@ -3,6 +3,7 @@ import { Search, X, Plus, Layers, Mountain, Package, Ruler, Save, WifiOff } from
 import { supabase } from '../lib/supabase';
 import { DateField } from '../components/DateField';
 import { getLocalDateISO } from '../lib/dates';
+import { readCachedCustomers, cacheCustomers } from '../lib/customerCache';
 import { TransactionItem } from '../db/schema';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
@@ -10,7 +11,7 @@ import { AppContext } from '../types';
 
 export default function NewEntryView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
   const { isOnline } = useOnlineStatus();
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>(() => readCachedCustomers());
   const [searchQuery, setSearchQuery] = useState('');
   const [showCustomersDropdown, setShowCustomersDropdown] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
@@ -18,7 +19,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
   useEffect(() => {
     const fetchCustomers = async () => {
        const { data } = await supabase.from('customers').select('*');
-       if (data) setCustomers(data);
+       if (data) { setCustomers(data); cacheCustomers(data); }
     };
     fetchCustomers();
   }, []);
@@ -73,6 +74,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
     
     setIsSubmitting(true);
     setErrorMsg(null);
+    let transactionConfirmed = false;
 
     const isNetworkError = (error: any) => {
         if (!navigator.onLine) return true;
@@ -82,29 +84,29 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
 
     const saveOffline = async () => {
         try {
-            const userRes = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-            const userId = userRes?.data?.user?.id;
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
             const validItems = items.map(({ id, ...rest }) => rest);
             
-            offlineSync.addPendingOp('transaction', 'insert', {
-                customer_id: selectedCustomer.id,
-                recorded_by: userId,
-                total_amount: totalBill,
-                date,
-                due_date: dueDate || null,
-                items: validItems
-            }, selectedCustomer.name);
-
+            const batch: Array<{ type: 'transaction' | 'payment'; action: 'insert'; payload: any; customerName?: string }> = [{
+                type: 'transaction', action: 'insert', customerName: selectedCustomer.name,
+                payload: {
+                    customer_id: selectedCustomer.id, recorded_by: userId,
+                    total_amount: totalBill, date, due_date: dueDate || null, items: validItems
+                }
+            }];
             if (Number(cashPaid) > 0) {
-                offlineSync.addPendingOp('payment', 'insert', {
-                    customer_id: selectedCustomer.id,
-                    recorded_by: userId,
-                    amount: Number(cashPaid),
-                    payment_mode: paymentMode,
-                    reference_notes: 'Initial Payment (Offline)',
-                    date
-                }, selectedCustomer.name);
+                batch.push({
+                    type: 'payment', action: 'insert', customerName: selectedCustomer.name,
+                    payload: {
+                        customer_id: selectedCustomer.id, recorded_by: userId,
+                        amount: Number(cashPaid), payment_mode: paymentMode,
+                        reference_notes: 'Initial Payment (Offline)', date
+                    }
+                });
             }
+            // Transaction and initial payment are saved together or neither is saved.
+            offlineSync.addPendingBatch(batch);
 
             alert('You are currently offline or connection is unstable. Your entry has been saved locally and will sync automatically once network service is restored.');
             navigateTo('customer-ledger', { customerId: selectedCustomer.id });
@@ -135,6 +137,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
             items: validItems
         }]);
         if (txError) throw txError;
+        transactionConfirmed = true;
 
         if (Number(cashPaid) > 0) {
             const { error: pyError } = await supabase.from('payments').insert([{
@@ -151,7 +154,12 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
         navigateTo('customer-ledger', { customerId: selectedCustomer.id });
     } catch (error: any) {
         console.error('Error saving entry:', error);
-        if (isNetworkError(error)) {
+        if (transactionConfirmed) {
+            // Purchase was accepted by Supabase; do NOT re-queue the same sale.
+            // A payment timeout can have an uncertain commit status.
+            setErrorMsg('Sale saved, but the initial payment could not be confirmed. Please check the customer ledger before recording any payment again.');
+            setIsSubmitting(false);
+        } else if (isNetworkError(error)) {
             await saveOffline();
         } else {
             setErrorMsg(error.message || error.details || error.hint || JSON.stringify(error) || 'Failed to save entry');
