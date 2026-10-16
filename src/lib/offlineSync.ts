@@ -26,6 +26,11 @@ class OfflineSyncEngine {
         console.log('[OfflineSync] Network status: OFFLINE.');
         this.notify();
       });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.getPendingOps().length && navigator.onLine) {
+          this.sync().catch(error => console.error('[OfflineSync] Resume sync failed:', error));
+        }
+      });
     }
   }
 
@@ -61,34 +66,34 @@ class OfflineSyncEngine {
   }
 
   private savePendingOps(ops: PendingOp[]) {
+    // A failed storage write must NEVER be reported as a successful offline save.
+    // The caller must remain on the form and show a visible error.
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
-    } catch (e) {
-      console.error('[OfflineSync] Error writing to localStorage:', e);
+    } catch (error) {
+      console.error('[OfflineSync] Failed to persist offline records:', error);
+      throw new Error('Unable to save offline. Free some device storage and try again. Your entry was NOT saved.');
     }
     this.notify();
   }
 
   addPendingOp(type: PendingOp['type'], action: PendingOp['action'], payload: any, customerName?: string): PendingOp {
-    const newOp: PendingOp = {
-      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      action,
-      payload,
-      timestamp: Date.now(),
-      customerName
-    };
+    return this.addPendingBatch([{ type, action, payload, customerName }])[0];
+  }
 
-    const ops = this.getPendingOps();
-    ops.push(newOp);
-    this.savePendingOps(ops);
-    
-    // Attempt an immediate sync if we believe we are online
-    if (this.isOnline) {
-      this.sync();
-    }
-    
-    return newOp;
+  /** Persist all parts of a sale/payment in ONE atomic storage write. */
+  addPendingBatch(entries: Array<Pick<PendingOp, 'type' | 'action' | 'payload' | 'customerName'>>): PendingOp[] {
+    const timestamp = Date.now();
+    const newOps: PendingOp[] = entries.map((entry, index) => ({
+      ...entry,
+      id: `${entry.type}-${timestamp}-${index}-${Math.random().toString(36).slice(2, 11)}`,
+      timestamp: timestamp + index
+    }));
+    if (!newOps.length) return [];
+    const pending = this.getPendingOps();
+    this.savePendingOps([...pending, ...newOps]);
+    if (this.isOnline) this.sync().catch(error => console.error('[OfflineSync] Background sync failed:', error));
+    return newOps;
   }
 
   removePendingOp(id: string) {
@@ -146,7 +151,13 @@ class OfflineSyncEngine {
             if (error) throw error;
             if (data?.id && tempCustId) {
               idMap[tempCustId] = data.id;
-              console.log(`[OfflineSync] Mapped temp customer ID ${tempCustId} -> real ID ${data.id}`);
+              // Remap still-queued entries durably, across app restarts.
+              const remaining = this.getPendingOps().map(p => ({
+                ...p,
+                payload: p.payload?.customer_id === tempCustId ? { ...p.payload, customer_id: data.id } : p.payload
+              }));
+              this.savePendingOps(remaining);
+              console.log(`[OfflineSync] Remapped pending customer ${tempCustId} to ${data.id}`);
             }
           } else {
             // Update
@@ -219,10 +230,10 @@ class OfflineSyncEngine {
           err?.message?.toLowerCase().includes('network') ||
           err?.status === 0;
 
-        if (isNetworkErr) {
-          console.log('[OfflineSync] Halting synchronization due to connectivity loss.');
-          break;
-        }
+        // Never process child payments/transactions after a failed earlier operation.
+        // Keep the remaining queue intact for safe manual or reconnect retry.
+        console.warn('[OfflineSync] Pausing queue to preserve chronological dependencies.');
+        break;
       }
     }
 
