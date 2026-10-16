@@ -590,3 +590,34 @@ body { margin: 0; position: relative; overscroll-behavior: none; }
 @media (min-width: 1024px) {
   .zl-sidebar { display: flex !important; }
 }
+
+
+/* Android small-display density pass, verified against rendered screenshots. */
+@media (max-width: 1023px) {
+ .zl-bottom-grid { grid-template-columns: minmax(0,1fr) !important; }
+}
+@media (max-width: 599px) {
+ .zl-recovery-main {
+   flex-wrap: nowrap !important;
+   flex-direction: row;
+   justify-content: space-between;
+   min-height: 0;
+   gap: 9px;
+   padding: 18px 0;
+ }
+ .zl-ring { width: 112px; height: 112px; }
+ .zl-ring-inner { width: 94px; height: 94px; }
+ .zl-ring-percent { font-size: 29px; }
+ .zl-ring-percent span { font-size: 15px; }
+ .zl-ring-inner p { font-size: 9px; }
+ .zl-recovery-text { min-width: 0; width: auto; max-width: calc(100% - 121px); align-items: flex-start; text-align: left; }
+ .zl-recovery-text h3 { font-size: clamp(22px,6vw,28px); margin-top: 9px; }
+ .zl-recovery-text p { font-size: 10px; }
+ .zl-recovery-pill { white-space: normal; font-size: 9px; }
+ .zl-text-link { white-space: normal; font-size: 10px; line-height: 1.35; }
+ .zl-recovery-footer { padding: 13px 0 16px; }
+ .zl-recovery-footer strong { font-size: 15px; }
+ .zl-upcoming-panel { min-height: 0 !important; }
+ .zl-quick-heading { padding: 16px 17px 13px; }
+ .zl-quick-grid > button { padding: 13px; }
+}
