@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { AlertCircle, ArrowUpRight, BadgeDollarSign, HeartHandshake, Loader2, MessageCircle, Phone, ReceiptText, Search, UserMinus, UserCheck, Wallet, Calendar, Plus } from 'lucide-react';
 import { AppContext } from '../types';
+import { getLocalDateISO } from '../lib/dates';
 
 interface RecoveryDashboardViewProps {
   navigateTo: (view: any, context?: AppContext) => void;
@@ -32,8 +33,8 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
       setLoading(true);
       setErrorMsg(null);
       try {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+        const todayStr = getLocalDateISO();
+        const currentMonth = todayStr.slice(0, 7); // Local calendar month
         const firstDayOfMonth = `${currentMonth}-01`;
         
         const dateObj = new Date();
@@ -70,8 +71,9 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
         const customersList = customersRes.data || [];
 
         // Map customers with balances and address/phone information
+        const customerById = new Map(customersList.map((c: any) => [c.id, c]));
         const mappedCustomers = balancesList.map((bal: any) => {
-          const custInfo = customersList.find((c: any) => c.id === bal.customer_id);
+          const custInfo: any = customerById.get(bal.customer_id);
           return {
             ...bal,
             phone: custInfo?.phone || '',
@@ -122,11 +124,11 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
   }, []);
 
   // Filter accounts based on selected diary and search query
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
   const filteredCustomers = overdueCustomers.filter(c => {
     const matchesDiary = selectedDiary === 'ALL' || c.diary_id === selectedDiary;
-    const matchesSearch = c.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.phone?.includes(searchQuery) ||
-                          (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = !normalizedSearch || [c.customer_name, c.phone, c.address]
+      .some(value => String(value ?? '').toLocaleLowerCase().includes(normalizedSearch));
     const hasOutstanding = (c.outstanding_balance || 0) > 0;
     return matchesDiary && matchesSearch && hasOutstanding;
   });
@@ -180,7 +182,7 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
             <AlertCircle className="text-error group-hover:scale-110 transition-transform duration-300" />
           </div>
           <div>
-            <div className="font-label-numeric text-4xl md:text-[44px] tracking-tight font-bold text-error mb-2">
+            <div className="zl-metric-number font-label-numeric text-3xl md:text-[44px] tracking-tight font-bold text-error mb-2">
               ₹ {metrics.totalDue.toLocaleString()}
             </div>
             <div className="text-[13px] text-on-error-container/80 flex items-center gap-1.5 font-medium">
@@ -253,11 +255,11 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
         </div>
 
         {/* Recent Payment Feed */}
-        <div className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden flex flex-col h-full">
+        <div className="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm overflow-hidden flex flex-col min-w-0">
           <div className="p-6 border-b border-surface-variant/40 bg-surface-container-low/30">
             <h3 className="text-lg font-bold text-on-surface">Recent Collections</h3>
           </div>
-          <div className="flex-grow overflow-y-auto max-h-[220px] divide-y divide-surface-variant/30">
+          <div className="flex-grow md:overflow-y-auto md:max-h-[220px] divide-y divide-surface-variant/30">
             {recentPayments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-on-surface-variant opacity-70 p-6 min-h-[160px]">
                 <HeartHandshake size={24} className="mb-2 opacity-60 text-on-surface-variant" />
@@ -292,9 +294,9 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
             <p className="text-xs text-on-surface-variant font-medium mt-0.5">Filter by book/diary or search to perform instant recovery actions.</p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto min-w-0">
             {/* Search Input */}
-            <div className="relative flex-1 sm:w-60">
+            <div className="relative flex-1 w-full min-w-0 sm:w-60">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant">
                 <Search size={16} />
               </span>
@@ -303,7 +305,7 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
                 placeholder="Search debtor name..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 h-11 bg-surface-container border border-outline-variant/50 rounded-full text-xs font-semibold focus:outline-none focus:border-primary transition-colors"
+                className="w-full pl-10 pr-4 h-11 bg-surface-container border border-outline-variant/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary transition-colors"
               />
             </div>
             
@@ -311,7 +313,7 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
             <select
               value={selectedDiary}
               onChange={e => setSelectedDiary(e.target.value)}
-              className="px-4 h-11 bg-surface-container border border-outline-variant/50 rounded-full text-xs font-semibold focus:outline-none focus:border-primary transition-colors cursor-pointer text-on-surface"
+              className="px-4 h-11 w-full sm:w-auto bg-surface-container border border-outline-variant/50 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary transition-colors cursor-pointer text-on-surface"
             >
               <option value="ALL">All Diaries / Zones</option>
               {diaries.map(d => (
@@ -321,8 +323,49 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
           </div>
         </div>
 
-        {/* Customers list content */}
-        <div className="overflow-x-auto">
+        {/* Compact actionable recovery cards — no sideways scrolling on Android. */}
+        <div className="md:hidden divide-y divide-surface-variant/50" data-testid="mobile-recovery-accounts">
+          {filteredCustomers.length === 0 ? (
+            <div className="p-7 text-center text-sm text-on-surface-variant">No matching debtor accounts.</div>
+          ) : filteredCustomers.map(cust => (
+            <article key={cust.customer_id} className="p-4 space-y-3 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-sm break-words text-on-surface">{cust.customer_name || 'Customer'}</div>
+                  <div className="text-xs text-on-surface-variant mt-1 break-all">{cust.phone || cust.address || 'No contact details'}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] text-on-surface-variant uppercase font-bold">Outstanding</div>
+                  <div className="font-bold text-error text-lg font-label-numeric">₹{Number(cust.outstanding_balance || 0).toLocaleString('en-IN')}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className={`rounded-lg px-2.5 py-1.5 font-bold ${cust.status === 'OVER_LIMIT' ? 'bg-red-500/10 text-red-700' : 'bg-amber-500/10 text-amber-700'}`}>
+                  {cust.status === 'OVER_LIMIT' ? 'Over limit' : 'Balance due'}
+                </span>
+                <span className="text-on-surface-variant">Limit: ₹{Number(cust.credit_limit || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => navigateTo('customer-ledger', { customerId: cust.customer_id })}
+                  className="min-h-11 rounded-xl bg-surface-container text-primary font-semibold text-xs flex justify-center items-center gap-2">
+                  <ReceiptText size={16} /> View ledger
+                </button>
+                <button type="button" onClick={() => navigateTo('record-payment', { customerId: cust.customer_id })}
+                  className="min-h-11 rounded-xl bg-primary text-on-primary font-semibold text-xs flex justify-center items-center gap-2">
+                  <BadgeDollarSign size={16} /> Record payment
+                </button>
+              </div>
+              {cust.phone && (
+                <button type="button" onClick={() => navigateTo('whatsapp-reminder', { customerId: cust.customer_id })}
+                  className="text-green-700 text-xs font-semibold flex items-center gap-1.5 min-h-9">
+                  <MessageCircle size={15} /> WhatsApp reminder
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+        {/* Original detailed desktop table remains unchanged. */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-surface-variant text-on-surface-variant/80 text-[11px] font-bold uppercase tracking-wider bg-surface-container-low/20">
