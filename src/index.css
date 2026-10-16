@@ -621,3 +621,19 @@ body { margin: 0; position: relative; overscroll-behavior: none; }
  .zl-quick-heading { padding: 16px 17px 13px; }
  .zl-quick-grid > button { padding: 13px; }
 }
+
+
+/* Android V2 QA: customer search and finance summary stability. */
+.zl-customers-page { min-height: 100%; }
+.zl-customers-page > * { min-width: 0; }
+.zl-customers-page input[type="text"] { min-width: 0; font-size: 16px; }
+.zl-customers-page .rounded-xl { min-width: 0; }
+.zl-customers-page .group { min-width: 0; }
+.zl-metric-number { overflow-wrap: anywhere; word-break: normal; font-variant-numeric: tabular-nums; line-height: 1.18; }
+@media (max-width: 767px) {
+ .zl-metric-number { font-size: clamp(24px, 6.8vw, 32px) !important; }
+ .zl-legacy-page > section { min-width: 0; }
+ .zl-legacy-page > section > .grid { min-width: 0; }
+ .zl-customers-page .text-right { max-width: 43%; }
+ .zl-customers-page .group .break-words { overflow-wrap: anywhere; }
+}
