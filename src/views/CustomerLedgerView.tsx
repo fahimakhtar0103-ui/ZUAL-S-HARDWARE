@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2, WifiOff, Edit, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { DateField } from '../components/DateField';
 import { AppContext } from '../types';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
@@ -426,12 +427,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Date</label>
-                        <div className="relative">
-                            <div className="w-full h-12 px-4 flex items-center rounded-xl bg-surface-container border border-outline-variant/30 font-medium text-on-surface pointer-events-none">
-                                {entryToEdit.date ? new Date(entryToEdit.date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
-                            </div>
-                            <input type="date" value={entryToEdit.date} onChange={e => setEntryToEdit({...entryToEdit, date: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        </div>
+                        <DateField label="Entry date" value={entryToEdit.date ?? ''} onChange={date => setEntryToEdit({...entryToEdit, date})} />
                     </div>
 
                     {entryToEdit.type === 'debit' ? (
