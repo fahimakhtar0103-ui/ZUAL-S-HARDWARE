@@ -1,7 +1,7 @@
 name: Build Zual Hardware Android APK
 on:
   push:
-    branches: [design/zual-premium-os]
+    branches: [android/zual-install-reliability-v2]
   workflow_dispatch:
 
 permissions:
@@ -68,6 +68,11 @@ jobs:
           python scripts/brand_android.py
           test -s android/app/src/main/assets/public/index.html
           echo "Capacitor Android project contains locally bundled assets."
+      - name: Set version and compatibility metadata
+        run: |
+          sed -i 's/versionCode 1/versionCode 2/' android/app/build.gradle
+          sed -i 's/versionName "1.0"/versionName "2.0"/' android/app/build.gradle
+          grep -n 'applicationId\|versionCode\|versionName\|minSdk' android/app/build.gradle
       - name: Compile installable Android APK
         run: |
           chmod +x android/gradlew
@@ -80,7 +85,11 @@ jobs:
           echo "APK size: $(du -h "$APK" | cut -f1)"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
           "$APKSIGNER" verify "$APK"
-          echo "APK verified."
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | grep -E '^(package:|sdkVersion:|targetSdkVersion:)' > android-apk-details.txt
+          cat android-apk-details.txt
+          grep -q "name='in.zualhardware.mobile'" android-apk-details.txt
+          echo "APK signed and install package verified."
       - name: Upload APK for installation
         uses: actions/upload-artifact@v4
         with:
