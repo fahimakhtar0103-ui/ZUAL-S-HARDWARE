@@ -91,7 +91,7 @@ export default function PaymentHistoryView({ navigateTo }: { navigateTo: any }) 
   });
 
   return (
-    <div className="zl-legacy-page flex-1 w-full max-w-6xl mx-auto px-4 py-8 md:p-12 space-y-6 flex flex-col h-full">
+    <div className="zl-legacy-page w-full max-w-6xl mx-auto px-4 py-8 md:p-12 space-y-6 flex flex-col min-h-full pb-32">
       {errorMsg && (
         <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20 mb-2">
           <p className="font-bold mb-1">Error Loading Data:</p>
