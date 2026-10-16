@@ -33,8 +33,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Verify preinstalled Android SDK
+        run: |
+          test -d "$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platforms"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          fi
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: Python for branded Android icon
         uses: actions/setup-python@v5
         with:
