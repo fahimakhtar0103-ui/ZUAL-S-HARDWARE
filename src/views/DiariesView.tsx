@@ -242,7 +242,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
       {/* Add Diary Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-2xl shadow-xl border border-outline-variant/30 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-container-lowest w-full max-w-md mobile-dialog rounded-2xl shadow-xl border border-outline-variant/30 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-5 border-b border-outline-variant/30 bg-surface">
               <h3 className="text-xl font-bold text-on-surface tracking-tight">Create New Diary</h3>
             </div>
@@ -295,7 +295,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
       {/* Edit Diary Modal */}
       {isEditModalOpen && editingDiary && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-2xl shadow-xl border border-outline-variant/30 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-container-lowest w-full max-w-md mobile-dialog rounded-2xl shadow-xl border border-outline-variant/30 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-5 border-b border-outline-variant/30 bg-surface">
               <h3 className="text-xl font-bold text-on-surface tracking-tight">Edit Diary</h3>
             </div>
