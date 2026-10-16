@@ -482,3 +482,97 @@ body { background: var(--zl-paper); -webkit-font-smoothing: antialiased; }
  .zl-auth-hero { padding:30px 20px; }
  .zl-auth-card .p-8 { padding:24px; }
 }
+
+
+/* ANDROID 2.0 — SINGLE SCROLL ROOT
+   Bug fix: old min-h:100dvh flex chain had no bounded height on narrow screens.
+   Chromium WebView could place its scroller outside the visual viewport and
+   leave the dashboard unscrollable behind the fixed tab bar. */
+html, body, #root { height: 100%; min-height: 0; width: 100%; overflow: hidden; }
+body { margin: 0; position: relative; overscroll-behavior: none; }
+.zl-app-shell {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: flex;
+}
+.zl-workspace-main {
+  height: 100%;
+  height: 100dvh;
+  min-height: 0 !important;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+.zl-workspace-scroll {
+  display: block;
+  position: relative;
+  min-height: 0 !important;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: auto;
+  scroll-behavior: auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.zl-dashboard { min-width: 0; width: 100%; }
+.zl-page-intro, .zl-panel, .zl-summary, .zl-hero, .zl-overview,
+.zl-bottom-grid, .zl-summary-grid { min-width: 0; }
+.zl-legacy-page { width: 100%; min-width: 0; }
+.zl-legacy-page input, .zl-legacy-page textarea, .zl-legacy-page select {
+  max-width: 100%;
+}
+.zl-legacy-page :is(.grid, .flex) > * { min-width: 0; }
+.zl-auth-cover { height: 100vh; height: 100dvh; min-height: 0 !important; overflow-y: auto; }
+.zl-workspace-main .fixed.zl-fab { bottom: calc(84px + env(safe-area-inset-bottom,0px)); }
+.zl-mobile-nav { padding-bottom: 0; touch-action: manipulation; }
+.zl-mobile-nav-inner { padding-bottom: max(8px, env(safe-area-inset-bottom,0px)); }
+.zl-workspace-scroll :is(.overflow-x-auto, table) { touch-action: auto; }
+@media (max-width: 1023px) {
+ .zl-app-shell { flex-direction: column; }
+ .zl-workspace-header { flex-shrink: 0; }
+ .zl-workspace-scroll { scrollbar-gutter: auto; }
+ .zl-dashboard { padding: 12px 14px 28px; gap: 15px; }
+ .zl-workspace-main .fixed.zl-fab { bottom: calc(82px + env(safe-area-inset-bottom, 0px)); }
+ .zl-panel { max-width: 100%; }
+ .zl-recovery-main { flex-wrap: wrap; }
+ .zl-upcoming-panel { min-height: 0; }
+ .zl-empty-state { min-height: 205px; }
+}
+@media (max-width: 599px) {
+ .zl-page-intro { gap: 10px; }
+ .zl-page-title { font-size: 29px; }
+ .zl-overview { grid-template-columns: 1fr; gap: 11px; }
+ .zl-hero { min-height: 208px; padding: 17px 19px; }
+ .zl-hero-center { padding: 12px 0; }
+ .zl-hero-amount { font-size: clamp(31px,9vw,43px); line-height: 1.18; }
+ .zl-hero-bottom { padding-top: 11px; }
+ .zl-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+ .zl-summary { min-height: 126px; padding: 12px 13px; }
+ .zl-summary-value { font-size: clamp(21px,6vw,27px); }
+ .zl-summary-note { font-size: 10px; }
+ .zl-summary-icon { width: 33px; height: 33px; }
+ .zl-recovery-main { min-height: 0; }
+ .zl-panel-heading h2, .zl-quick-heading h2 { font-size: 16px; }
+ .zl-quick-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .zl-quick-grid strong { white-space: normal; overflow-wrap: anywhere; }
+ .zl-date-chip span { white-space: normal; }
+ .zl-legacy-page { padding-left: 13px; padding-right: 13px; padding-bottom: 110px; }
+ .zl-legacy-page :is(input,select,textarea) { min-width: 0; font-size: 16px; }
+ .zl-legacy-page .grid > * { min-width: 0; }
+}
+@media(max-width: 349px) {
+ .zl-summary-value { font-size: 19px; }
+ .zl-quick-grid > button { padding: 11px 9px; gap: 7px; }
+ .zl-quick-icon { width: 30px; height: 30px; }
+ .zl-date-chip { padding: 7px; font-size: 9px; }
+ .zl-intro-actions > .zl-button { padding: 0 10px; }
+}
