@@ -22,7 +22,7 @@ const auxiliary = [
 export function Sidebar({ currentView, navigateTo }: NavigationProps) {
   const go = (view: ViewState) => navigateTo(view);
   return (
-    <aside className="zl-sidebar hidden md:flex" aria-label="Main sidebar">
+    <aside className="zl-sidebar hidden lg:flex" aria-label="Main sidebar">
       <div className="zl-brand">
         <span className="zl-brand-symbol" aria-hidden="true">Z</span>
         <div>
@@ -94,9 +94,9 @@ export function BottomNav({ currentView, navigateTo }: NavigationProps) {
     <>
       {moreOpen && (
         <>
-          <button type="button" className="zl-more-overlay md:hidden" aria-label="Close more menu"
+          <button type="button" className="zl-more-overlay lg:hidden" aria-label="Close more menu"
             onClick={() => setMoreOpen(false)} />
-          <div className="zl-more-sheet md:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
+          <div className="zl-more-sheet lg:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
             <div className="zl-more-title">More from your workspace</div>
             <div className="zl-more-grid">
               <button onClick={() => go('reports')}><ChartNoAxesCombined size={19} /> Reports</button>
@@ -109,7 +109,7 @@ export function BottomNav({ currentView, navigateTo }: NavigationProps) {
           </div>
         </>
       )}
-      <nav className="zl-mobile-nav md:hidden fixed bottom-0 left-0 right-0 z-50" aria-label="Mobile navigation">
+      <nav className="zl-mobile-nav lg:hidden fixed bottom-0 left-0 right-0 z-50" aria-label="Mobile navigation">
         <div className="zl-mobile-nav-inner">
           {mainItems.slice(0, 4).map(item => {
             const active = item.id === currentView && !moreOpen;
