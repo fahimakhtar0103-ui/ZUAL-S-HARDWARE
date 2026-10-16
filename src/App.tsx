@@ -137,9 +137,29 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Native Android Back uses the WebView's history. Keep SPA screen history
+  // in sync so Back returns to the prior screen rather than exiting abruptly.
+  useEffect(() => {
+    const handleBack = (event: PopStateEvent) => {
+      const state = event.state as { zualView?: ViewState; zualContext?: AppContext } | null;
+      setCurrentView(state?.zualView ?? 'dashboard');
+      setContext(state?.zualContext ?? {});
+      document.querySelector('.zl-workspace-scroll')?.scrollTo({ top: 0, behavior: 'auto' });
+    };
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
+  }, []);
+
   const navigateTo = (view: ViewState, newContext?: AppContext) => {
+    if (currentView !== view || !!newContext) {
+      window.history.pushState({ zualView: view, zualContext: newContext ?? {} }, '');
+    }
     setCurrentView(view);
-    if (newContext) setContext(newContext);
+    setContext(newContext ?? {});
+    // Navigation from a long ledger always starts at the next screen's top.
+    requestAnimationFrame(() => {
+      document.querySelector('.zl-workspace-scroll')?.scrollTo({ top: 0, behavior: 'auto' });
+    });
   };
 
   if (loading) {
