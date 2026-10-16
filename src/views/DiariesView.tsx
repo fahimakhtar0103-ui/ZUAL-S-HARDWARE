@@ -345,7 +345,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
       {/* Delete Diary Modal */}
       {diaryToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Diary</h3>
                 <p className="text-sm text-on-surface-variant mb-6 text-balance">
                     Are you sure you want to delete this diary? This will permanently delete all associated customers, transactions, and payments.
