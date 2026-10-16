@@ -3,6 +3,7 @@ import { TrendingUp, Wallet, AlertTriangle, MonitorSmartphone, CreditCard, Packa
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getLocalDateISO } from '../lib/dates';
 
 export default function ReportsView({ navigateTo }: { navigateTo: any }) {
   const [salesRows, setSalesRows] = useState<any[]>([]);
@@ -42,11 +43,11 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
   }, []);
 
   const getFilteredMetrics = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateISO();
     
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+    const sevenDaysAgoStr = getLocalDateISO(sevenDaysAgo);
 
     const filteredSales = salesRows.filter(s => {
       if (timeFilter === 'ALL') return true;
@@ -171,7 +172,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
       }
 
       else if (reportTitle === 'Collection Forecast') {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateISO();
         const { data, error } = await supabase
           .from('transactions')
           .select(`due_date, total_amount, customers ( name )`)
@@ -268,7 +269,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
           <h2 className="text-3xl md:text-[48px] font-bold text-primary tracking-tight">Enterprise Reports</h2>
           <p className="text-on-surface-variant font-medium text-[15px] mt-2">Analyze sales, collections, and inventory performance.</p>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar md:pb-0">
+        <div className="flex gap-2 overflow-x-auto min-w-0 max-w-full pb-2 hide-scrollbar md:pb-0">
           <button 
             onClick={() => setTimeFilter('TODAY')}
             className={`px-5 py-2.5 h-11 rounded-full border text-[13px] font-bold whitespace-nowrap transition-colors ${timeFilter === 'TODAY' ? 'bg-primary text-on-primary border-transparent shadow-md' : 'bg-surface-container border-outline-variant/30 text-on-surface hover:bg-surface-container-highest pointer-events-auto'}`}
@@ -300,7 +301,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
              <TrendingUp className="text-secondary group-hover:scale-125 transition-transform duration-300" />
            </div>
            <div>
-             <div className="font-label-numeric text-4xl md:text-[44px] tracking-tight font-bold text-primary mb-2">₹ {metrics.totalSales.toLocaleString()}</div>
+             <div className="zl-metric-number font-label-numeric text-3xl md:text-[44px] tracking-tight font-bold text-primary mb-2">₹ {metrics.totalSales.toLocaleString()}</div>
              <div className="text-[13px] text-on-surface-variant flex items-center gap-1.5 font-medium">Selected period performance</div>
            </div>
         </div>
@@ -311,7 +312,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
              <Wallet className="text-secondary group-hover:scale-125 transition-transform duration-300" />
            </div>
            <div>
-             <div className="font-label-numeric text-4xl md:text-[44px] tracking-tight font-bold text-primary mb-2">₹ {metrics.totalCollection.toLocaleString()}</div>
+             <div className="zl-metric-number font-label-numeric text-3xl md:text-[44px] tracking-tight font-bold text-primary mb-2">₹ {metrics.totalCollection.toLocaleString()}</div>
              <div className="text-[13px] text-on-surface-variant flex items-center gap-1.5 font-medium">Selected period payments</div>
            </div>
         </div>
@@ -325,7 +326,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
              <AlertTriangle className="text-error-container" />
            </div>
            <div className="relative z-10">
-             <div className="font-label-numeric text-4xl md:text-[44px] tracking-tight font-bold text-white mb-2">₹ {metrics.outstandingDue.toLocaleString()}</div>
+             <div className="zl-metric-number font-label-numeric text-3xl md:text-[44px] tracking-tight font-bold text-white mb-2">₹ {metrics.outstandingDue.toLocaleString()}</div>
              <div className="text-[13px] text-on-tertiary-container font-medium">Across {metrics.activeDebtors} active debtors</div>
            </div>
         </div>
@@ -339,8 +340,8 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
          </div>
          <div className="divide-y divide-surface-variant/50">
             {reports.map((r, i) => (
-              <div key={i} className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 hover:bg-surface-container-low transition-colors group">
-                 <div className="flex items-start gap-5">
+              <div key={i} className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container-low transition-colors group min-w-0">
+                 <div className="flex items-start gap-3 sm:gap-5 min-w-0">
                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${r.color}`}>
                        <r.icon size={24} />
                     </div>
@@ -349,25 +350,25 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
                        <p className="text-[14px] text-on-surface-variant font-medium md:max-w-xl">{r.desc}</p>
                     </div>
                  </div>
-                 <div className="flex flex-wrap items-center gap-3 pl-16 md:pl-0">
+                 <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3 md:pl-0 w-full md:w-auto">
                     <button 
                       onClick={() => handleExport(r.title, 'pdf')}
                       disabled={isExporting !== null}
-                      className="h-10 px-4 rounded-lg bg-red-500/10 border border-red-500/30 text-[13px] font-bold text-red-600 dark:text-red-400 flex items-center gap-2 hover:bg-red-500/20 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="h-10 min-w-0 px-2 sm:px-4 justify-center rounded-lg bg-red-500/10 border border-red-500/30 text-[13px] font-bold text-red-600 dark:text-red-400 flex items-center gap-2 hover:bg-red-500/20 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                        <FileText size={16} /> {isExporting === r.title + '_pdf' ? 'Exporting PDF...' : 'PDF'}
                     </button>
                     <button 
                       onClick={() => handleExport(r.title, 'excel')}
                       disabled={isExporting !== null}
-                      className="h-10 px-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[13px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 hover:bg-emerald-500/20 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="h-10 min-w-0 px-2 sm:px-4 justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[13px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 hover:bg-emerald-500/20 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                        <Download size={16} /> {isExporting === r.title + '_excel' ? 'Exporting Excel...' : 'Excel'}
                     </button>
                     <button 
                       onClick={() => handleExport(r.title, 'csv')}
                       disabled={isExporting !== null}
-                      className="h-10 px-4 rounded-lg bg-surface border border-outline-variant/40 text-[13px] font-bold text-on-surface flex items-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="h-10 min-w-0 px-2 sm:px-4 justify-center rounded-lg bg-surface border border-outline-variant/40 text-[13px] font-bold text-on-surface flex items-center gap-2 hover:bg-surface-container-highest transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                        <Download size={16} className="text-on-surface-variant" /> {isExporting === r.title + '_csv' ? 'Exporting CSV...' : 'CSV'}
                     </button>
