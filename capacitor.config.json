@@ -1,6 +1,6 @@
 {
-  "appId": "in.zualhardware.mobile",
-  "appName": "Zual Hardware",
+  "appId": "in.zualhardware.mobileqa",
+  "appName": "Zual Hardware QA",
   "webDir": "dist",
   "backgroundColor": "#f5f7fb",
   "loggingBehavior": "none",
