@@ -184,13 +184,13 @@ export default function App() {
 
   // Define which views should omit the generic TopBar (they have custom headers or it's built-in)
   const showTopBar = !['settings', 'reports', 'customers', 'diaries', 'search', 'recovery-dashboard'].includes(currentView);
-  const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history', 'recovery-dashboard'].includes(currentView);
+  const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history'].includes(currentView);
 
   return (
-    <div className="bg-background text-on-background font-body-md antialiased min-h-[100dvh] flex flex-col md:flex-row overflow-x-hidden">
+    <div className="zl-app-shell text-on-background font-body-md antialiased min-h-[100dvh] flex flex-col md:flex-row overflow-x-hidden">
       <Sidebar currentView={currentView} navigateTo={navigateTo} />
       
-      <main className="flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-[100dvh] min-w-0 w-full max-w-full overflow-x-hidden">
+      <main className="zl-workspace-main flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-[100dvh] min-w-0 w-full max-w-full overflow-x-hidden">
          {showTopBar && (
            <TopBar 
              currentView={currentView} 
@@ -221,7 +221,7 @@ export default function App() {
            </div>
          )}
          
-         <div className="flex-1 overflow-y-auto md:hide-scrollbar relative touch-pan-y scroll-smooth">
+         <div className="zl-workspace-scroll flex-1 overflow-y-auto md:hide-scrollbar relative touch-pan-y scroll-smooth">
             {currentView === 'dashboard' && <DashboardView navigateTo={navigateTo} />}
             {currentView === 'diaries' && <DiariesView navigateTo={navigateTo} />}
             {currentView === 'customers' && <CustomersView navigateTo={navigateTo} />}
@@ -242,10 +242,11 @@ export default function App() {
          {!showBack && <BottomNav currentView={currentView} navigateTo={navigateTo} />}
          
          {/* Global FAB */}
-         {['dashboard', 'diaries', 'customers'].includes(currentView) && (
+         {['diaries', 'customers'].includes(currentView) && (
            <button 
+             aria-label="Add new sale" type="button"
              onClick={() => navigateTo('new-entry')}
-             className="fixed bottom-24 md:bottom-8 right-6 md:right-8 w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-lg flex items-center justify-center hover:-translate-y-1 hover:shadow-xl active:scale-95 transition-all z-50 group border border-outline-variant/30"
+             className="zl-fab fixed bottom-24 md:bottom-8 right-5 md:right-8 w-14 h-14 flex items-center justify-center active:scale-95 transition-all z-50 group"
            >
              <Plus size={32} className="group-hover:rotate-90 transition-transform duration-300 stroke-[2.5]" />
            </button>

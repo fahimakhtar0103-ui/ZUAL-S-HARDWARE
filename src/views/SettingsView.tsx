@@ -727,7 +727,7 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="flex-grow px-4 md:px-12 py-6 md:py-8 pb-32 max-w-7xl mx-auto w-full">
+    <div className="zl-legacy-page flex-grow px-4 md:px-12 py-6 md:py-8 pb-32 max-w-7xl mx-auto w-full">
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h2 className="text-3xl md:text-[48px] font-bold text-primary mb-2 tracking-tight">

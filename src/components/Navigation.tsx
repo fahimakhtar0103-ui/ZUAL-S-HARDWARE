@@ -1,70 +1,134 @@
-import React from 'react';
-import { LayoutDashboard, BookOpen, Users, LineChart, Settings, ShoppingCart, CreditCard, BadgeDollarSign } from 'lucide-react';
-import { NavigationProps } from '../types';
+import React, { useState } from 'react';
+import {
+  ArrowRight, BadgeDollarSign, BookOpen, ChartNoAxesCombined, CreditCard, LayoutDashboard,
+  MoreHorizontal, Plus, ReceiptText, Search, Settings, Users, X, CircleHelp, LogIn
+} from 'lucide-react';
+import { NavigationProps, ViewState } from '../types';
 
-const navigation = [
-  { id: 'dashboard', label: 'Dashboard', short: 'Home', icon: LayoutDashboard },
+const mainItems = [
+  { id: 'dashboard', label: 'Overview', short: 'Home', icon: LayoutDashboard },
   { id: 'diaries', label: 'Diaries', short: 'Diaries', icon: BookOpen },
   { id: 'customers', label: 'Customers', short: 'Customers', icon: Users },
-  { id: 'reports', label: 'Reports', short: 'Reports', icon: LineChart },
-  { id: 'recovery-dashboard', label: 'Recovery', short: 'Dues', icon: BadgeDollarSign },
-  { id: 'settings', label: 'Settings', short: 'Settings', icon: Settings },
+  { id: 'recovery-dashboard', label: 'Recovery', short: 'Recovery', icon: BadgeDollarSign },
+  { id: 'reports', label: 'Analytics', short: 'Reports', icon: ChartNoAxesCombined },
+] as const;
+
+const auxiliary = [
+  { id: 'payment-history', label: 'Payment history', icon: ReceiptText },
+  { id: 'search', label: 'Search records', icon: Search },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ] as const;
 
 export function Sidebar({ currentView, navigateTo }: NavigationProps) {
+  const go = (view: ViewState) => navigateTo(view);
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-surface-container-lowest border-r border-outline-variant/30 h-[100dvh] sticky top-0 flex-shrink-0 z-50">
-      <div className="px-6 pt-8 pb-6 flex items-center gap-3">
-        <div className="w-11 h-11 shrink-0 rounded-xl bg-primary text-on-primary flex items-center justify-center text-xl font-black">Z</div>
-        <div className="min-w-0">
-          <h1 className="text-lg font-extrabold leading-tight text-on-surface tracking-tight">Zual Hardware</h1>
-          <p className="text-xs text-on-surface-variant mt-1">Business workspace</p>
+    <aside className="zl-sidebar hidden md:flex" aria-label="Main sidebar">
+      <div className="zl-brand">
+        <span className="zl-brand-symbol" aria-hidden="true">Z</span>
+        <div>
+          <h1>Zual Hardware</h1>
+          <p>BUSINESS OPERATIONS</p>
         </div>
       </div>
-      <div className="px-4 pb-6 flex flex-col gap-2">
-        <button type="button" onClick={() => navigateTo('new-entry')}
-          className="w-full min-h-11 bg-primary text-on-primary rounded-xl flex items-center gap-3 px-4 text-sm font-bold hover:bg-primary-container transition-colors">
-          <ShoppingCart size={18} /> New Sale
-        </button>
-        <button type="button" onClick={() => navigateTo('record-payment')}
-          className="w-full min-h-11 bg-surface-container rounded-xl flex items-center gap-3 px-4 text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors">
-          <CreditCard size={18} /> Record Payment
-        </button>
-      </div>
-      <p className="px-7 pb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Workspace</p>
-      <nav className="flex-1 overflow-y-auto px-3 pb-5 flex flex-col gap-1" aria-label="Primary navigation">
-        {navigation.map(item => {
+
+      <p className="zl-sidebar-label">WORKSPACE</p>
+      <nav className="zl-side-nav" aria-label="Primary">
+        {mainItems.map(item => {
           const active = currentView === item.id;
           return (
-            <button key={item.id} type="button" onClick={() => navigateTo(item.id)}
-              aria-current={active ? 'page' : undefined}
-              className={`min-h-11 w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-left text-sm ${active ? 'bg-secondary-fixed text-on-secondary-fixed font-bold' : 'text-on-surface-variant hover:bg-surface-container font-medium'}`}>
-              <item.icon size={19} className={active ? 'text-secondary' : ''} />
+            <button type="button" key={item.id} className={'zl-side-button' + (active ? ' active' : '')}
+              aria-current={active ? 'page' : undefined} onClick={() => go(item.id)}>
+              <item.icon size={19} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
               <span>{item.label}</span>
             </button>
           );
         })}
       </nav>
+
+      <div className="zl-sidebar-rule" />
+      <p className="zl-sidebar-label">MANAGE</p>
+      <nav className="zl-side-nav" aria-label="Management">
+        {auxiliary.map(item => {
+          const active = currentView === item.id;
+          return (
+            <button key={item.id} type="button" onClick={() => go(item.id)}
+              className={'zl-side-button' + (active ? ' active' : '')}
+              aria-current={active ? 'page' : undefined}>
+              <item.icon size={19} strokeWidth={1.8} aria-hidden="true" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="zl-sidebar-rule" />
+      <p className="zl-sidebar-label">QUICK CREATE</p>
+      <div className="zl-sidebar-quick">
+        <button type="button" className="zl-sidebar-primary" onClick={() => go('new-entry')}>
+          <Plus size={19} /> New sale <ArrowRight size={17} style={{ marginLeft: 'auto' }} />
+        </button>
+        <button type="button" className="zl-sidebar-secondary" onClick={() => go('record-payment')}>
+          <CreditCard size={18} /> Record payment
+        </button>
+      </div>
+
+      <div className="zl-sidebar-footer">
+        <button type="button" className="zl-sidebar-profile" onClick={() => go('settings')}>
+          <span className="zl-sidebar-profile-icon"><Settings size={19} /></span>
+          <span><div className="zl-sidebar-profile-name">Workspace settings</div><div className="zl-sidebar-profile-caption">Manage your business</div></span>
+          <ArrowRight size={16} className="zl-sidebar-profile-arrow" />
+        </button>
+      </div>
     </aside>
   );
 }
 
 export function BottomNav({ currentView, navigateTo }: NavigationProps) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreActive = ['reports', 'settings', 'payment-history', 'search'].includes(currentView);
+  const go = (view: ViewState) => {
+    setMoreOpen(false);
+    navigateTo(view);
+  };
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-lowest/95 border-t border-outline-variant/60 shadow-[0_-4px_25px_rgba(20,28,38,0.08)] backdrop-blur-md" aria-label="Mobile navigation">
-      <div className="grid grid-cols-6 gap-0.5 px-1.5 pt-2 pb-safe">
-        {navigation.map(item => {
-          const active = currentView === item.id;
-          return (
-            <button key={item.id} type="button" onClick={() => navigateTo(item.id)}
-              aria-label={item.label} aria-current={active ? 'page' : undefined}
-              className={`min-w-0 min-h-[52px] flex flex-col items-center justify-center rounded-xl gap-1 transition-colors ${active ? 'bg-secondary-fixed text-on-secondary-fixed' : 'text-on-surface-variant hover:bg-surface-container'}`}>
-              <item.icon size={20} strokeWidth={active ? 2.4 : 1.8} aria-hidden="true" />
-              <span className={`text-[9px] sm:text-[10px] whitespace-nowrap leading-tight ${active ? 'font-extrabold' : 'font-medium'}`}>{item.short}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      {moreOpen && (
+        <>
+          <button type="button" className="zl-more-overlay md:hidden" aria-label="Close more menu"
+            onClick={() => setMoreOpen(false)} />
+          <div className="zl-more-sheet md:hidden" role="dialog" aria-modal="true" aria-label="More navigation">
+            <div className="zl-more-title">More from your workspace</div>
+            <div className="zl-more-grid">
+              <button onClick={() => go('reports')}><ChartNoAxesCombined size={19} /> Reports</button>
+              <button onClick={() => go('payment-history')}><ReceiptText size={19} /> Payment history</button>
+              <button onClick={() => go('record-payment')}><CreditCard size={19} /> Record payment</button>
+              <button onClick={() => go('search')}><Search size={19} /> Find records</button>
+              <button onClick={() => go('settings')}><Settings size={19} /> Settings</button>
+              <button onClick={() => setMoreOpen(false)}><X size={19} /> Close menu</button>
+            </div>
+          </div>
+        </>
+      )}
+      <nav className="zl-mobile-nav md:hidden fixed bottom-0 left-0 right-0 z-50" aria-label="Mobile navigation">
+        <div className="zl-mobile-nav-inner">
+          {mainItems.slice(0, 4).map(item => {
+            const active = item.id === currentView && !moreOpen;
+            return (
+              <button key={item.id} type="button"
+                className={'zl-mobile-nav-button' + (active ? ' active' : '')}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => go(item.id)}>
+                <item.icon size={20} strokeWidth={active ? 2.4 : 1.85} aria-hidden="true" />
+                <span>{item.short}</span>
+              </button>
+            );
+          })}
+          <button type="button" className={'zl-mobile-nav-button' + ((moreOpen || moreActive) ? ' active' : '')}
+            aria-expanded={moreOpen} aria-label="More navigation options" onClick={() => setMoreOpen(!moreOpen)}>
+            <MoreHorizontal size={22} strokeWidth={2} aria-hidden="true" /><span>More</span>
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

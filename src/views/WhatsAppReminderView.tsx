@@ -61,7 +61,7 @@ export default function WhatsAppReminderView({ navigateTo, context }: { navigate
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:p-12 mb-12">
+    <div className="zl-legacy-page flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:p-12 mb-12">
        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 flex flex-col gap-8">
              <section className="bg-surface-container-lowest rounded-xl shadow-sm p-6 md:p-8 border border-outline-variant/30 flex flex-col gap-6 relative overflow-hidden">

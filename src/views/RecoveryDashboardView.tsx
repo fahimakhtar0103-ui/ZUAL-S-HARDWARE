@@ -145,7 +145,7 @@ export default function RecoveryDashboardView({ navigateTo }: RecoveryDashboardV
     : 0;
 
   return (
-    <div className="px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 pb-12">
+    <div className="zl-legacy-page px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 pb-12">
       {/* Top Welcome Title */}
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-surface-variant/50 pb-4 md:border-none md:pb-0">
         <div>

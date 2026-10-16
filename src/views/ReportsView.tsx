@@ -256,7 +256,7 @@ export default function ReportsView({ navigateTo }: { navigateTo: any }) {
   ];
 
   return (
-    <div className="px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 min-h-full pb-12">
+    <div className="zl-legacy-page px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 min-h-full pb-12">
       {errorMsg && (
         <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl border border-error/20 mb-2">
           <p className="font-bold mb-1">Error:</p>

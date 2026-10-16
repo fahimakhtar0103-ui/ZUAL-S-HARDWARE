@@ -1,49 +1,90 @@
-name: Build Android debug APK
+name: Build Zual Hardware Android APK
 on:
+  push:
+    branches: [design/zual-premium-os]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-zual-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  apk:
+  android-debug:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 35
     env:
-      VITE_SUPABASE_URL: ${{ secrets.ZUAL_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.ZUAL_SUPABASE_ANON_KEY }}
+      # These are the existing PUBLIC/ANON FRONTEND credentials embedded in the app.
+      # Never use the Supabase service_role or secret key in an Android bundle.
+      VITE_SUPABASE_URL: "https://exajrwxoijmgljcvigyj.supabase.co"
+      VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YWpyd3hvaWptZ2xqY3ZpZ3lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMjg1OTksImV4cCI6MjA5NTkwNDU5OX0.l13EJNVBGvJrlFsS69hLX_wOAajxfBlF8mJ9ks1ATw0"
     steps:
-      - uses: actions/checkout@v4
-      - name: Check backend configuration
-        run: |
-          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
-            echo "::error::Add ZUAL_SUPABASE_URL and ZUAL_SUPABASE_ANON_KEY as GitHub Actions repository secrets before building."
-            exit 1
-          fi
-      - uses: actions/setup-node@v4
+      - name: Checkout correct source
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-      - uses: actions/setup-java@v4
+          cache: npm
+      - name: Java 21
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - name: Install dependencies
+      - name: Verify preinstalled Android SDK
+        run: |
+          test -d "$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platforms"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)
+          fi
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Python for branded Android icon
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+      - name: Install existing app
         run: npm ci
-      - name: Install Capacitor Android tooling (CI only)
+      - name: Type-check all business modules
+        run: npm run lint
+      - name: Install Capacitor native build toolchain
         run: npm install --no-save --package-lock=false @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8
-      - name: Build bundled web application
+      - name: Build locally bundled application resources
         run: npm run build
       - name: Generate native Android project
         run: |
           npx cap add android
           npx cap sync android
-      - name: Build installable Android debug APK
+      - name: Brand launcher icon, status bar and keyboard
         run: |
+          python -m pip install --quiet Pillow
+          python scripts/brand_android.py
+          test -s android/app/src/main/assets/public/index.html
+          echo "Capacitor Android project contains locally bundled assets."
+      - name: Compile installable Android APK
+        run: |
+          chmod +x android/gradlew
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-      - uses: actions/upload-artifact@v4
+          ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Verify APK is signed and nonempty
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          echo "APK size: $(du -h "$APK" | cut -f1)"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify "$APK"
+          echo "APK verified."
+      - name: Upload APK for installation
+        uses: actions/upload-artifact@v4
         with:
-          name: zual-hardware-android-debug-apk
+          name: Zual-Hardware-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 14
+          retention-days: 30
+          if-no-files-found: error

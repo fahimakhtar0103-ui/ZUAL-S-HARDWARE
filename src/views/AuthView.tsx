@@ -106,12 +106,12 @@ export default function AuthView() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container overflow-hidden">
-        <div className="bg-primary p-8 text-on-primary text-center">
+    <div className="zl-auth-cover min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="zl-auth-card w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl border border-surface-container overflow-hidden">
+        <div className="zl-auth-hero bg-primary p-8 text-on-primary text-center">
            <Building2 size={48} className="mx-auto mb-4 opacity-90" />
-           <h1 className="text-2xl font-bold font-sans">Hardware ERP</h1>
-           <p className="text-primary-container font-medium mt-2">Manage your ledger securely</p>
+           <h1 className="text-2xl font-bold font-sans">Zual Hardware</h1>
+           <p className="text-[#c8d7f1] font-medium mt-2 text-sm">Your business. Beautifully in control.</p>
         </div>
         
         <div className="p-8">

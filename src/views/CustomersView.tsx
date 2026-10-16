@@ -239,7 +239,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
   const getOverdueCount = () => customers.filter(c => c.status === 'OVER_LIMIT').length;
 
   return (
-    <div className="px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 h-full relative">
+    <div className="zl-legacy-page px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4 h-full relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-4xl md:text-[48px] font-bold text-primary tracking-tight">Customers</h2>
