@@ -637,3 +637,7 @@ body { margin: 0; position: relative; overscroll-behavior: none; }
  .zl-customers-page .text-right { max-width: 43%; }
  .zl-customers-page .group .break-words { overflow-wrap: anywhere; }
 }
+
+/* Android phone typography and safe tappable header */
+html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+@media(max-width:767px){.zl-workspace-header{min-height:68px; flex-shrink:0; padding-top:max(8px,env(safe-area-inset-top,0px)); position:relative; z-index:30}.zl-workspace-header-left{min-width:0;flex:1}.zl-workspace-crumb{min-width:0}.zl-workspace-title{overflow-wrap:anywhere}.zl-back-button{min-width:44px;min-height:44px;touch-action:manipulation;flex-shrink:0}.zl-workspace-header-right{flex-shrink:0}.zl-customers-page .group{min-width:0}.zl-customers-page .group p,.zl-customers-page .group h3{overflow-wrap:anywhere}.zl-customers-page .group svg{flex-shrink:0}}
