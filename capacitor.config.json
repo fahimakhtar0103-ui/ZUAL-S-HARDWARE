@@ -1,0 +1,7 @@
+{
+  "appId": "in.zualhardware.erp",
+  "appName": "Zual Hardware",
+  "webDir": "dist",
+  "backgroundColor": "#f7f9fb",
+  "loggingBehavior": "debug"
+}

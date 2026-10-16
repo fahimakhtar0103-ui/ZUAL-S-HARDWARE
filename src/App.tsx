@@ -187,10 +187,10 @@ export default function App() {
   const showBack = ['new-entry', 'whatsapp-reminder', 'customer-ledger', 'record-payment', 'payment-history', 'recovery-dashboard'].includes(currentView);
 
   return (
-    <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+    <div className="bg-background text-on-background font-body-md antialiased min-h-[100dvh] flex flex-col md:flex-row overflow-x-hidden">
       <Sidebar currentView={currentView} navigateTo={navigateTo} />
       
-      <main className="flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-screen w-full max-w-full overflow-x-hidden">
+      <main className="flex-1 flex flex-col md:h-[100dvh] md:overflow-hidden relative min-h-[100dvh] min-w-0 w-full max-w-full overflow-x-hidden">
          {showTopBar && (
            <TopBar 
              currentView={currentView} 
@@ -202,7 +202,7 @@ export default function App() {
          
          {/* Offline Sync Global Banner */}
          {pendingCount > 0 && (
-           <div className={`fixed top-4 right-4 z-[999] flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg border text-xs font-bold transition-all duration-300 ${
+           <div className={`fixed top-20 md:top-4 right-4 z-[999] flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg border text-xs font-bold transition-all duration-300 ${
              isSyncing 
                ? 'bg-blue-600 border-blue-500 text-white animate-pulse' 
                : isOnline 

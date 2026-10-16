@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, CreditCard, Plus, MessageCircle, FileText, Loader2, WifiOff, Edit, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { DateField } from '../components/DateField';
 import { AppContext } from '../types';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
@@ -395,7 +396,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       {/* Delete Entry Modal */}
       {entryToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Entry</h3>
                 <p className="text-sm text-on-surface-variant mb-6 text-balance">
                     Are you sure you want to delete this {entryToDelete.type === 'debit' ? 'purchase' : 'payment'} entry from {new Date(entryToDelete.date).toLocaleDateString('en-GB')}? 
@@ -417,7 +418,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       {/* Edit Entry Modal */}
       {entryToEdit && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30" onClick={e => e.stopPropagation()}>
                 <div className="px-6 py-5 border-b border-outline-variant/30 flex justify-between items-center">
                     <h3 className="text-xl font-bold text-on-surface tracking-tight">Edit {entryToEdit.type === 'debit' ? 'Purchase' : 'Payment'}</h3>
                     <button onClick={() => setEntryToEdit(null)} className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors"><X size={20}/></button>
@@ -426,12 +427,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Date</label>
-                        <div className="relative">
-                            <div className="w-full h-12 px-4 flex items-center rounded-xl bg-surface-container border border-outline-variant/30 font-medium text-on-surface pointer-events-none">
-                                {entryToEdit.date ? new Date(entryToEdit.date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
-                            </div>
-                            <input type="date" value={entryToEdit.date} onChange={e => setEntryToEdit({...entryToEdit, date: e.target.value})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                        </div>
+                        <DateField label="Entry date" value={entryToEdit.date ?? ''} onChange={date => setEntryToEdit({...entryToEdit, date})} />
                     </div>
 
                     {entryToEdit.type === 'debit' ? (

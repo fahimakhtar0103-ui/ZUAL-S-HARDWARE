@@ -102,3 +102,70 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Android + responsive usability safeguards. Keep existing color tokens intact. */
+:root { color-scheme: light; }
+html, body, #root { width: 100%; min-width: 0; min-height: 100%; margin: 0; }
+html, body { overflow-x: hidden; }
+* { box-sizing: border-box; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+.pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+.date-control { position: relative; width: 100%; min-width: 0; }
+.date-control-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 3rem;
+  padding: 0 3.25rem 0 0.9rem;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 0.75rem;
+  background: var(--color-surface-container-lowest);
+  color: var(--color-on-surface);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  line-height: 1.2;
+  opacity: 1;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+.date-control-input:focus {
+  border-color: var(--color-secondary);
+  outline: 2px solid color-mix(in srgb, var(--color-secondary) 18%, transparent);
+  outline-offset: 0;
+}
+.date-control-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 2.75rem;
+  height: 100%;
+  cursor: pointer;
+}
+.date-control-trigger {
+  position: absolute;
+  z-index: 2;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-secondary);
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  touch-action: manipulation;
+}
+.date-control-trigger:hover { background: var(--color-surface-container-low); }
+@media (max-width: 767px) {
+  input, select, textarea { font-size: max(16px, 1em); }
+  button, a { touch-action: manipulation; }
+  .mobile-dialog { max-height: calc(100dvh - 1.5rem); overflow-y: auto; overscroll-behavior: contain; }
+}

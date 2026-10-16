@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Save, Calendar, FileText, Smartphone, WifiOff } from 'lucide-react';
+import { Search, Save, FileText, Smartphone, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { DateField } from '../components/DateField';
+import { getLocalDateISO } from '../lib/dates';
 import { AppContext } from '../types';
 import { offlineSync } from '../lib/offlineSync';
 
@@ -10,7 +12,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
   const [showCustomersDropdown, setShowCustomersDropdown] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalDateISO());
   const [amount, setAmount] = useState<number | ''>('');
   const [paymentMode, setPaymentMode] = useState<string>('Cash');
   const [isSplitPayment, setIsSplitPayment] = useState(false);
@@ -193,18 +195,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
         <div className="flex flex-col md:flex-row gap-5">
            <div className="flex-1 border border-outline-variant/50 rounded-xl bg-surface-container-lowest p-5 relative focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Date</label>
-             <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-primary z-10 pointer-events-none" size={20} />
-                <div className="w-full h-10 pl-11 pr-4 flex items-center bg-transparent font-label-numeric font-bold text-xl text-on-surface pointer-events-none">
-                  {date ? new Date(date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
-                </div>
-                <input 
-                  value={date} 
-                  onChange={e => setDate(e.target.value)} 
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                  type="date" 
-                />
-             </div>
+             <DateField label="Payment date" value={date} onChange={setDate} />
            </div>
            <div className="flex-[2] border border-outline-variant/50 rounded-xl bg-surface-container-lowest p-5 relative z-10 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Customer</label>
