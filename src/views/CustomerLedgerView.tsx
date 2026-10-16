@@ -218,7 +218,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
   ledgerRows.reverse();
 
   return (
-    <div className="zl-legacy-page flex-1 overflow-y-auto px-4 md:px-12 py-6 custom-scrollbar bg-surface-container-lowest h-full">
+    <div className="zl-legacy-page w-full min-w-0 px-4 md:px-12 py-6 bg-surface-container-lowest pb-32">
       <div className="max-w-5xl mx-auto space-y-6">
         {customer && (
         <div className="bg-surface-container rounded-xl p-6 shadow-sm border border-surface-variant">
