@@ -396,7 +396,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       {/* Delete Entry Modal */}
       {entryToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30 p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Entry</h3>
                 <p className="text-sm text-on-surface-variant mb-6 text-balance">
                     Are you sure you want to delete this {entryToDelete.type === 'debit' ? 'purchase' : 'payment'} entry from {new Date(entryToDelete.date).toLocaleDateString('en-GB')}? 
@@ -418,7 +418,7 @@ export default function CustomerLedgerView({ navigateTo, context }: { navigateTo
       {/* Edit Entry Modal */}
       {entryToEdit && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30" onClick={e => e.stopPropagation()}>
                 <div className="px-6 py-5 border-b border-outline-variant/30 flex justify-between items-center">
                     <h3 className="text-xl font-bold text-on-surface tracking-tight">Edit {entryToEdit.type === 'debit' ? 'Purchase' : 'Payment'}</h3>
                     <button onClick={() => setEntryToEdit(null)} className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-colors"><X size={20}/></button>
