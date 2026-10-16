@@ -151,11 +151,18 @@ try {
 
     await mobileNav.getByRole('button',{name:'Recovery'}).click();
     await page.getByRole('heading',{name:'Recovery Dashboard'}).waitFor({state:'visible',timeout:10000});
-    await page.locator('[data-testid="mobile-recovery-accounts"]').waitFor();
+    const recoveryList = size.width < 768
+      ? page.locator('[data-testid="mobile-recovery-accounts"]')
+      : page.locator('table').first();
+    await recoveryList.waitFor({state:'visible'});
     await page.getByPlaceholder('Search debtor name...').fill('demo');
-    await page.locator('[data-testid="mobile-recovery-accounts"]').getByText('Demo Customer',{exact:true}).first().waitFor();
+    await recoveryList.getByText('Demo Customer',{exact:true}).first().waitFor();
     await page.getByPlaceholder('Search debtor name...').fill('zz-no-customer');
-    await page.locator('[data-testid="mobile-recovery-accounts"]').getByText('No matching debtor accounts.').waitFor();
+    await recoveryList.getByText(
+      size.width < 768
+        ? 'No matching debtor accounts.'
+        : 'No matching debtor accounts with outstanding balances found.'
+    ).waitFor();
     await page.getByPlaceholder('Search debtor name...').fill('');
     const recoveryScroll=await page.locator('.zl-workspace-scroll').evaluate(node=>({
       height:node.clientHeight,scrollHeight:node.scrollHeight
