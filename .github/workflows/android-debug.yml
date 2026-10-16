@@ -88,7 +88,7 @@ jobs:
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
           "$AAPT" dump badging "$APK" | grep -E '^(package:|sdkVersion:|targetSdkVersion:)' > android-apk-details.txt
           cat android-apk-details.txt
-          grep -q "name='in.zualhardware.mobile'" android-apk-details.txt
+          grep -q "name='in.zualhardware.mobileqa'" android-apk-details.txt
           echo "APK signed and install package verified."
       - name: Upload APK for installation
         uses: actions/upload-artifact@v4
