@@ -359,7 +359,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
 
       {isModalOpen && (
         <div className="absolute inset-0 z-50 flex items-center justify-center px-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30">
+            <div className="w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30">
                 <div className="px-6 py-5 border-b border-surface-variant/50 flex justify-between items-center bg-surface-container/30">
                     <h3 className="text-xl font-bold text-primary tracking-tight">{editingCustomer?.id ? 'Edit Customer' : 'Add New Customer'}</h3>
                     <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container transition-colors text-on-surface-variant"><X size={20} /></button>
@@ -424,7 +424,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
       )}
       {customerToDelete && (
         <div className="absolute inset-0 z-50 flex items-center justify-center px-4 bg-scrim/40 backdrop-blur-sm">
-            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden flex flex-col border border-outline-variant/30 p-6">
+            <div className="w-full max-w-sm bg-surface-container-lowest rounded-2xl shadow-xl overflow-hidden mobile-dialog flex flex-col border border-outline-variant/30 p-6">
                 <h3 className="text-xl font-bold text-error tracking-tight mb-2">Delete Customer</h3>
                 <p className="text-sm text-on-surface-variant mb-6 text-balance">
                     Are you sure you want to delete this customer? This will also permanently delete all of their transactions and payments.
