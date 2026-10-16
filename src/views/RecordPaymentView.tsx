@@ -3,11 +3,12 @@ import { Search, Save, FileText, Smartphone, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DateField } from '../components/DateField';
 import { getLocalDateISO } from '../lib/dates';
+import { readCachedCustomers, cacheCustomers } from '../lib/customerCache';
 import { AppContext } from '../types';
 import { offlineSync } from '../lib/offlineSync';
 
 export default function RecordPaymentView({ navigateTo, context }: { navigateTo: any, context?: AppContext }) {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>(() => readCachedCustomers());
   const [searchQuery, setSearchQuery] = useState('');
   const [showCustomersDropdown, setShowCustomersDropdown] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
@@ -34,6 +35,7 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
                return { ...c, balance: balRow ? Number(balRow.outstanding_balance) : 0 };
            });
            setCustomers(processed);
+           cacheCustomers(processed);
        }
     };
     fetchCustomers();
@@ -79,40 +81,31 @@ export default function RecordPaymentView({ navigateTo, context }: { navigateTo:
 
     const saveOffline = async () => {
         try {
-            const userRes = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
-            const userId = userRes?.data?.user?.id;
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
 
+            const batch: Array<{type: 'payment'; action: 'insert'; payload: any; customerName?: string}> = [];
+            const addPayment = (paymentAmount: number, mode: string) => {
+                if (paymentAmount <= 0) return;
+                batch.push({
+                    type: 'payment', action: 'insert', customerName: selectedCustomer.name,
+                    payload: {
+                        customer_id: selectedCustomer.id,
+                        recorded_by: userId,
+                        amount: paymentAmount,
+                        payment_mode: mode,
+                        reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
+                        date
+                    }
+                });
+            };
             if (isSplitPayment) {
-                if (Number(cashAmount) > 0) {
-                    offlineSync.addPendingOp('payment', 'insert', {
-                        customer_id: selectedCustomer.id,
-                        recorded_by: userId,
-                        amount: Number(cashAmount),
-                        payment_mode: 'Cash',
-                        reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
-                        date
-                    }, selectedCustomer.name);
-                }
-                if (Number(onlineAmount) > 0) {
-                    offlineSync.addPendingOp('payment', 'insert', {
-                        customer_id: selectedCustomer.id,
-                        recorded_by: userId,
-                        amount: Number(onlineAmount),
-                        payment_mode: onlineMode,
-                        reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
-                        date
-                    }, selectedCustomer.name);
-                }
+                addPayment(Number(cashAmount), 'Cash');
+                addPayment(Number(onlineAmount), onlineMode);
             } else {
-                offlineSync.addPendingOp('payment', 'insert', {
-                    customer_id: selectedCustomer.id,
-                    recorded_by: userId,
-                    amount: Number(amount),
-                    payment_mode: paymentMode,
-                    reference_notes: referenceNotes ? `${referenceNotes} (Offline)` : 'Recorded Offline',
-                    date
-                }, selectedCustomer.name);
+                addPayment(Number(amount), paymentMode);
             }
+            offlineSync.addPendingBatch(batch);
 
             alert('You are offline or connection is weak. This payment transaction was saved locally and will auto-sync when online connection is restored.');
             navigateTo('customer-ledger', { customerId: selectedCustomer.id });
