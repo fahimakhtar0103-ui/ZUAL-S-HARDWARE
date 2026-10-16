@@ -435,3 +435,35 @@ body { background: var(--zl-paper); -webkit-font-smoothing: antialiased; }
 @media (prefers-reduced-motion:reduce) {
   .zl-dashboard *, .zl-sidebar *, .zl-mobile-nav * { animation-duration:0.01ms!important; transition-duration:0.01ms!important; }
 }
+
+
+/* Shared premium surface language for all existing business modules.
+   Presentation-only: data reads/writes, forms and saved values stay unchanged. */
+.zl-legacy-page { color: #1e2c45; }
+.zl-legacy-page :is(h1,h2,h3) { letter-spacing: -.035em; }
+.zl-legacy-page h2.text-4xl,
+.zl-legacy-page h2.md\:text-\[48px\],
+.zl-legacy-page h2.text-3xl { font-size: clamp(27px,2.5vw,35px)!important; line-height:1.18; font-weight:800; color:#182741; }
+.zl-legacy-page h2 + p { line-height:1.65; }
+.zl-legacy-page :is(.bg-surface-container-lowest,.bg-surface) { border-color:#e8edf5; }
+.zl-legacy-page .rounded-xl { border-radius: 16px; }
+.zl-legacy-page .rounded-2xl { border-radius: 20px; }
+.zl-legacy-page .shadow-sm { box-shadow:0 4px 19px rgba(30,50,80,.038),0 1px 3px rgba(30,50,80,.025); }
+.zl-legacy-page .rounded-full:is(button,.cursor-pointer) { border-radius:12px; }
+.zl-legacy-page :is(input,select,textarea) { accent-color:#2563eb; }
+.zl-legacy-page :is(input,textarea,select):focus-visible { outline-color:#8db4ff; outline-offset:1px; }
+.zl-legacy-page button { transition:background-color .18s ease, border-color .18s ease,box-shadow .18s ease,transform .18s ease; }
+.zl-legacy-page button:hover:not([disabled]) { box-shadow:0 5px 16px rgba(40,65,110,.08); }
+.zl-legacy-page .group:hover { border-color:#d9e4f4; }
+.zl-legacy-page table { border-collapse:separate; border-spacing:0; }
+.zl-legacy-page table thead { color:#8b98af; }
+.zl-legacy-page .overflow-x-auto { -webkit-overflow-scrolling:touch; }
+.zl-legacy-page .mobile-dialog { max-height:calc(100dvh - 30px); overflow-y:auto; }
+.zl-legacy-page .font-label-numeric { letter-spacing:-.015em; font-variant-numeric:tabular-nums; }
+@media (max-width:767px) {
+  .zl-legacy-page { padding-left:15px; padding-right:15px; }
+  .zl-legacy-page :is(h1,h2).text-4xl { font-size:28px!important; }
+  .zl-legacy-page .grid { min-width:0; }
+  .zl-legacy-page [class*="max-w-"] { max-width:100%; }
+  .zl-legacy-page [class*="shadow-"] { box-shadow:0 3px 12px rgba(40,60,85,.035); }
+}
