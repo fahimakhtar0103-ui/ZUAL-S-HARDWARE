@@ -11,7 +11,7 @@ No database migration, reset or record deletion is part of this conversion.
    - `ZUAL_SUPABASE_URL`: the URL already configured as `VITE_SUPABASE_URL` in the live Vercel project.
    - `ZUAL_SUPABASE_ANON_KEY`: the **public/anon** key already configured as `VITE_SUPABASE_ANON_KEY`.
    - **Never** use the Supabase service_role key or secret API key in client apps.
-3. Go to **Actions > Build Android debug APK > Run workflow** and choose the `fix/android-date-ui-safe` branch.
+3. **Important:** GitHub manual workflow dispatch appears only after the workflow file has been added to the repository's default branch. Review and merge the PR when QA is approved, then open **Actions > Build Android debug APK > Run workflow** and choose the desired branch.
 4. After the run succeeds, download the `zual-hardware-android-debug-apk` workflow artifact. Extract and install `app-debug.apk` for testing.
 5. Sign and test a release build before distributing to customers or publishing on the Play Store.
 
