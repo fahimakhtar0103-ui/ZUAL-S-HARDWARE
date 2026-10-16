@@ -1,7 +1,11 @@
 {
-  "appId": "in.zualhardware.erp",
+  "appId": "in.zualhardware.mobile",
   "appName": "Zual Hardware",
   "webDir": "dist",
-  "backgroundColor": "#f7f9fb",
-  "loggingBehavior": "debug"
+  "backgroundColor": "#f5f7fb",
+  "loggingBehavior": "none",
+  "android": {
+    "webContentsDebuggingEnabled": false,
+    "allowMixedContent": false
+  }
 }
