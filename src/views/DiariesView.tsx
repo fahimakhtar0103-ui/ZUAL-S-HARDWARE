@@ -156,7 +156,7 @@ export default function DiariesView({ navigateTo }: { navigateTo: any }) {
   );
 
   return (
-    <div className="px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4">
+    <div className="zl-legacy-page px-4 md:px-12 max-w-7xl mx-auto flex flex-col gap-6 pt-4">
       {errorMsg && !isModalOpen && !isEditModalOpen && (
         <div className="p-4 bg-error-container text-on-error-container text-sm font-medium rounded-xl shadow-sm border border-error/20">
           <p className="font-bold mb-1">Error:</p>
