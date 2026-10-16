@@ -1,7 +1,7 @@
 name: Web quality checks
 on:
   push:
-    branches: [fix/android-date-ui-safe, design/zual-premium-os, android/zual-install-reliability-v2]
+    branches: [fix/android-date-ui-safe, design/zual-premium-os, android/zual-install-reliability-v2, android/v2-qa-search-reports-recovery]
   pull_request:
     branches: [main]
 
