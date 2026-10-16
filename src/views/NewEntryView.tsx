@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Plus, Layers, Mountain, Package, Ruler, Save, WifiOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { DateField } from '../components/DateField';
+import { getLocalDateISO } from '../lib/dates';
 import { TransactionItem } from '../db/schema';
 import { offlineSync, useOnlineStatus } from '../lib/offlineSync';
 
@@ -27,7 +29,7 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
         if (cust) setSelectedCustomer(cust);
     }
   }, [context?.customerId, customers, selectedCustomer]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalDateISO());
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -182,21 +184,11 @@ export default function NewEntryView({ navigateTo, context }: { navigateTo: any,
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Date</label>
-             <div className="relative">
-               <div className="w-full h-12 px-4 flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface shadow-sm pointer-events-none">
-                  {date ? new Date(date).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
-               </div>
-               <input value={date} onChange={e => setDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="date" />
-             </div>
+             <DateField label="Transaction date" value={date} onChange={setDate} />
           </div>
           <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Due Date</label>
-             <div className="relative">
-               <div className="w-full h-12 px-4 flex items-center bg-surface-container-lowest border border-outline-variant/60 rounded-lg font-label-numeric font-semibold text-on-surface shadow-sm pointer-events-none">
-                  {dueDate ? new Date(dueDate).toLocaleDateString('en-GB') : 'DD/MM/YYYY'}
-               </div>
-               <input value={dueDate} onChange={e => setDueDate(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="date" />
-             </div>
+             <DateField label="Due date" value={dueDate} onChange={setDueDate} />
           </div>
           <div className="flex-1 relative">
              <label className="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-widest">Customer</label>
