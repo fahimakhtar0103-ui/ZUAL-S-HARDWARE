@@ -107,10 +107,11 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
     setSearchQuery(e.target.value);
   };
 
-  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const normalizeSearch = (value: unknown) => String(value ?? '').normalize('NFKD').toLocaleLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const normalizedQuery = normalizeSearch(searchQuery);
   const filteredCustomers = customers.filter(c => {
     const matchesQuery = !normalizedQuery || [c.name, c.phone, c.address]
-      .some(value => String(value ?? '').toLocaleLowerCase().includes(normalizedQuery));
+      .some(value => normalizeSearch(value).includes(normalizedQuery));
     if (!matchesQuery) return false;
     
     if (filterType === 'OUTSTANDING') {
@@ -120,6 +121,10 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
       return c.status === 'OVER_LIMIT';
     }
     return true;
+  }).sort((a, b) => {
+    if (!normalizedQuery) return 0;
+    const rank = (c: any) => { const name = normalizeSearch(c.name); const tokens = name.split(' '); return name.startsWith(normalizedQuery) ? 0 : tokens.some(t => t.startsWith(normalizedQuery)) ? 1 : name.includes(normalizedQuery) ? 2 : 3; };
+    return rank(a) - rank(b);
   });
 
   useEffect(() => { setVisibleCount(60); }, [searchQuery, filterType, diaryId]);
@@ -265,7 +270,7 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full min-w-0 font-medium">
+      <div className="flex flex-col md:flex-row gap-2 md:gap-3 w-full min-w-0 font-medium">
         <div className="flex-1 w-full min-w-0 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size={20} />
           <input 
@@ -335,13 +340,13 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                  const isHealthy = !isOverdue && (c.balance || 0) < 50000;
                  return (
                  <div key={c.id} onClick={() => navigateTo('customer-ledger', { customerId: c.id })} className="rounded-xl bg-surface-container-lowest shadow-sm cursor-pointer border border-outline-variant/30 hover:shadow-md transition-shadow relative group">
-                   <div className="p-3.5 sm:p-4 md:p-6 flex items-start sm:items-center justify-between gap-2.5 min-w-0">
-                     <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1">
+                   <div className="p-3.5 sm:p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
+                     <div className="flex items-start gap-2.5 sm:gap-4 min-w-0 w-full flex-1">
                         <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0 ${isOverdue ? 'bg-error-container text-on-error-container' : isHealthy ? 'bg-surface-variant text-on-surface-variant' : 'bg-secondary-container text-on-secondary-container'}`}>
                           {c.name.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <h3 className="text-[15px] sm:text-[18px] font-bold text-primary tracking-tight break-words">{c.name}</h3>
                             {c.isPending && (
                               <span className="inline-flex items-center gap-1 text-[10px] bg-amber-500/15 text-amber-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse whitespace-nowrap">
@@ -349,19 +354,19 @@ export default function CustomersView({ navigateTo, context }: { navigateTo: any
                               </span>
                             )}
                           </div>
-                          <p className="text-xs sm:text-sm text-on-surface-variant flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 font-medium break-all">
-                            <span className="flex items-center gap-1"><Phone size={12} className="text-outline" /> {c.phone || 'N/A'}</span>
+                          <p className="text-xs sm:text-sm text-on-surface-variant flex flex-col sm:flex-row sm:flex-wrap items-start gap-x-2 gap-y-1 mt-1 font-medium min-w-0">
+                            <span className="flex items-center gap-1 min-w-0 break-all"><Phone size={12} className="text-outline" /> {c.phone || 'N/A'}</span>
                             <span className="text-outline-variant">•</span>
-                            <span className="flex items-center gap-1"><MapPin size={12} className="text-outline" /> {c.address || 'N/A'}</span>
+                            <span className="flex items-start gap-1 min-w-0 break-words"><MapPin size={12} className="text-outline" /> {c.address || 'N/A'}</span>
                           </p>
                         </div>
                      </div>
-                     <div className="text-right flex flex-col justify-between items-end h-full shrink-0 pl-1">
-                        <div className="flex items-center gap-2 mb-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                     <div className="w-full md:w-auto flex flex-row md:flex-col-reverse justify-between md:justify-between items-center md:items-end gap-2 border-t border-outline-variant/30 pt-3 md:border-0 md:pt-0 shrink-0">
+                        <div className="flex items-center gap-2 order-2 md:order-none md:mb-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                            <button onClick={(e) => openEditModal(c, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-secondary rounded-full hover:bg-secondary-container transition-colors bg-surface-container md:bg-transparent"><Edit size={16} /></button>
                            <button onClick={(e) => handleDeleteClick(c.id, e)} className="p-2 md:p-1.5 text-on-surface-variant hover:text-error rounded-full hover:bg-error-container transition-colors bg-surface-container md:bg-transparent"><Trash2 size={16} /></button>
                         </div>
-                        <p className={`font-label-numeric text-[16px] sm:text-[22px] md:text-2xl font-bold tracking-tight ${isOverdue ? 'text-error' : 'text-primary'}`}>
+                        <p className={`font-label-numeric order-1 md:order-none text-[18px] sm:text-[22px] md:text-2xl font-bold tracking-tight ${isOverdue ? 'text-error' : 'text-primary'}`}>
                            ₹ {(c.balance || 0).toLocaleString()}
                         </p>
                      </div>
