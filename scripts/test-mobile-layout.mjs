@@ -106,6 +106,7 @@ try {
     assert.ok(state.height>100,JSON.stringify({size,state,reason:'scroller height'}));
     assert.ok(state.actualOverflow>100,JSON.stringify({size,state,reason:'dashboard content not scrollable'}));
     assert.ok(state.bodyWidth <= state.windowWidth+4,JSON.stringify({size,state,reason:'horizontal clipping'}));
+    await page.screenshot({path:'android-ui-screenshots/dashboard-top-'+size.width+'.png',fullPage:false});
     await page.mouse.move(size.width/2,size.height/2);
     await page.mouse.wheel(0,600);
     await page.waitForTimeout(200);
